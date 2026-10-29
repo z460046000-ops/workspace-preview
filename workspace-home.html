@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>WorkSpace · 开始新工作</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="catalogue.css">
+  <link rel="stylesheet" href="learn.css">
+  <script src="app.js" defer></script>
+  <script src="catalogue.js" defer></script>
+  <script src="start-page.js" defer></script>
+  <script src="learn.js" defer></script>
+</head>
+<body data-density="relaxed" data-view="home">
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/></symbol>
+      <symbol id="i-shop" viewBox="0 0 24 24"><path d="m4 4-2 5v3a3 3 0 0 0 5 2 3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5-2V9l-2-5H4ZM2 9h20M4 15v6h16v-6M9 21v-5h6v5"/></symbol>
+      <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a20 20 0 0 0 18 0M12 11v4"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/></symbol>
+      <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4V8Z"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Zm0 0v6h6M8 13h8M8 17h5"/></symbol>
+      <symbol id="i-clip" viewBox="0 0 24 24"><path d="m8 13 7-7a3 3 0 0 1 4 4L9 20a5 5 0 0 1-7-7L13 2m-6 12 7-7"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h6m4 0h6M4 17h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v.2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#request-input">跳到工作输入</a>
+  <button id="nav-backdrop" class="nav-backdrop" hidden aria-label="关闭导航"></button>
+  <aside id="sidebar" class="sidebar" aria-label="主导航">
+    <div class="brand"><img class="brand-logo" src="assets/workspace-logo-light.svg" alt="WorkSpace" width="180" height="49"></div>
+    <button id="new-work-button" class="new-work is-active" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>开始新工作</button>
+    <nav class="main-nav">
+      <button id="nav-records" class="nav-item" hidden><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>工作记录</button>
+      <button id="nav-catalogue" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>场景集市</button>
+      <button class="nav-item" data-preview-note="个人空间沿用现有功能；本轮只设计工作台首页。"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>个人空间</button>
+      <button class="nav-item" data-preview-note="资料库沿用现有功能；企业共享和权限范围需与实际产品对齐。"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>资料库</button>
+      <button id="nav-learn" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>学习中心</button>
+    </nav>
+    <div class="nav-group-label">服务与需求<span>万大圣</span></div>
+    <nav aria-label="服务与需求" class="market-nav">
+      <button class="nav-item" data-preview-note="找服务：付费请服务商解决问题。这里浏览万大圣服务目录，详情与交易前往万大圣；本页仅演示入口。"><svg class="icon" aria-hidden="true"><use href="#i-shop"/></svg>找服务<svg class="icon nav-arrow" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+      <button class="nav-item" data-preview-note="接需求：承接雇主的需求，完成工作获取报酬。这里浏览万大圣公开需求，详情与交易前往万大圣；本页仅演示入口。"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg>接需求<svg class="icon nav-arrow" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+    </nav>
+    <div class="nav-group-label recent-label">对话记录</div>
+    <div id="sidebar-recent" class="sidebar-recent"></div>
+    <div class="sidebar-bottom">
+      <button class="account" data-preview-note="当前是设计预览账号，未登录真实企业。"><span class="avatar">W</span><span class="account-copy"><strong>演示用户</strong><small>设计预览</small></span><span class="account-more" aria-hidden="true">···</span></button>
+    </div>
+  </aside>
+  <div class="workspace-shell">
+    <header class="preview-toolbar">
+      <button id="menu-button" class="icon-button mobile-menu" aria-label="展开导航" aria-controls="sidebar" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <div class="preview-tools"><button id="settings-button" class="icon-button" aria-label="预览设置" title="预览设置" aria-expanded="false" aria-controls="preview-settings"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button></div>
+      <section id="preview-settings" class="preview-settings" aria-label="预览设置" hidden>
+        <h2>预览设置</h2>
+        <label for="preview-state">页面状态</label><select id="preview-state"><option value="populated">有工作记录</option><option value="new">首次使用</option><option value="loading">正在加载</option><option value="error">加载失败</option></select>
+        <label for="density-control">信息密度</label><select id="density-control"><option value="relaxed">舒适</option><option value="compact">紧凑</option></select>
+        <p>只调整这份设计预览。</p>
+      </section>
+    </header>
+    <main id="main-content" class="main-content">
+      <div id="home-view">
+        <section id="composer-section" class="composer-section" aria-labelledby="welcome-title">
+          <div class="start-work-heading">
+            <h1 id="welcome-title" class="start-work-title">想完成什么工作？</h1>
+          </div>
+          <div id="start-task-options" class="start-task-options" role="group" aria-label="具体工作"></div>
+          <form id="request-form" class="composer hero-composer">
+            <label class="sr-only" for="request-input">工作要求</label>
+            <textarea id="request-input" rows="4" placeholder="描述你要完成的工作，也可以选一个标签，或参考下方海报……" maxlength="5000"></textarea>
+            <div id="attachment-list" class="attachment-list"></div>
+            <div class="composer-toolbar">
+              <button id="attach-button" type="button" class="attach-button" aria-label="添加资料"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>添加资料</span></button>
+              <div class="submit-area"><span class="keyboard-hint">⌘ / Ctrl + Enter 发送</span><button id="start-button" class="primary-button" type="submit" aria-label="开始工作" disabled><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button></div>
+            </div>
+            <input type="file" id="file-input" multiple hidden>
+          </form>
+          <div class="poster-heading"><h2>海报参考</h2><button id="all-scenes-button" class="text-button">场景集市<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+          <div id="poster-gallery" class="poster-gallery" role="group" aria-label="选择海报参考风格">
+            <button type="button" class="poster-reference" data-poster-style="editorial" data-poster-label="设计沙龙 · 编辑排版" aria-label="参考设计沙龙的编辑排版风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/editorial.webp" width="480" height="720" alt="米白底黑字搭配黄绿色纸艺的设计沙龙海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">设计沙龙</span></button>
+            <button type="button" class="poster-reference" data-poster-style="launch" data-poster-label="新品发布 · 蓝白视觉" aria-label="参考新品发布的蓝白视觉风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/launch.webp" width="480" height="720" alt="蓝白配色与金属圆环的新品发布海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">新品发布</span></button>
+            <button type="button" class="poster-reference" data-poster-style="nature" data-poster-label="春日上新 · 自然生活" aria-label="参考春日上新的自然生活风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/nature.webp" width="480" height="720" alt="米白花瓶与绿色枝叶的春日上新海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">春日上新</span></button>
+            <button type="button" class="poster-reference" data-poster-style="coffee" data-poster-label="城市咖啡节 · 暖色生活" aria-label="参考城市咖啡节的暖色生活风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/coffee.webp" width="480" height="720" alt="暖红与奶油白配色的城市咖啡节海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">城市咖啡节</span></button>
+            <button type="button" class="poster-reference" data-poster-style="minimal" data-poster-label="品牌新章 · 黑白极简" aria-label="参考品牌新章的黑白极简风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/minimal.webp" width="480" height="720" alt="黑白字体与银色材质的品牌视觉海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">品牌视觉</span></button>
+            <button type="button" class="poster-reference" data-poster-style="recruit" data-poster-label="寻找同路人 · 醒目招募" aria-label="参考寻找同路人的醒目招募风格制作海报" aria-pressed="false"><span class="poster-art"><img loading="lazy" decoding="async" src="assets/posters/recruit.webp" width="480" height="720" alt="朱红与米白大字排版的寻找同路人招募海报"><span class="poster-selected" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></span><span class="poster-caption">招募海报</span></button>
+          </div>
+        </section>
+      </div>
+      <div id="records-view" hidden>
+        <section id="recent-section" class="work-section recent-section" aria-labelledby="recent-title">
+          <div class="section-header"><div class="section-title"><h2 id="recent-title">工作记录</h2></div></div>
+          <div class="record-toolbar"><div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="records-search">搜索工作记录</label><input id="records-search" type="search" placeholder="搜索工作名称"></div><label class="sr-only" for="records-filter">筛选工作状态</label><select id="records-filter" class="filter-select"><option value="all">全部状态</option><option value="active">尚未完成</option><option value="done">已确认</option></select></div>
+          <div id="recent-list" class="recent-list"></div>
+          <div id="record-empty" class="record-empty" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><h3>还没有工作记录</h3><p>点击左侧“开始新工作”。</p></div>
+          <div id="record-loading" class="record-loading" role="status" hidden><span class="sr-only">正在读取工作记录</span><div class="skeleton-row"><i></i><span></span><em></em></div><div class="skeleton-row"><i></i><span></span><em></em></div><div class="skeleton-row"><i></i><span></span><em></em></div></div>
+          <div id="record-error" class="record-error" role="status" hidden><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><h3>暂时无法读取工作记录</h3><p>请重试。已有内容不会因此被清空。</p><button id="retry-button" class="secondary-button">重新加载</button></div>
+        </section>
+      </div>
+      <section id="detail-view" aria-label="工作详情示例" hidden></section>
+      <section id="catalogue-view" aria-labelledby="catalogue-title" hidden>
+        <header class="catalogue-header">
+          <div><h1 id="catalogue-title" tabindex="-1">场景集市</h1><p>找一位专家，或让专家团一起完成工作。</p></div>
+          <div class="catalogue-search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="catalogue-search">搜索专家或专家团</label><input id="catalogue-search" type="search" placeholder="搜索专家、专家团" maxlength="100"></div>
+        </header>
+        <section class="featured-section" aria-label="按工作方向发现专家与专家团"><div id="catalogue-featured" class="catalogue-featured"></div></section>
+        <div class="catalogue-selection-bar">
+          <div class="catalogue-type-tabs" role="tablist" aria-label="选择专家或专家团">
+            <button id="tab-experts" type="button" role="tab" data-catalogue-type="experts" aria-selected="true" aria-controls="catalogue-grid" tabindex="0">专家</button>
+            <button id="tab-teams" type="button" role="tab" data-catalogue-type="teams" aria-selected="false" aria-controls="catalogue-grid" tabindex="-1">专家团</button>
+          </div>
+          <div class="catalogue-sort"><label class="sr-only" for="catalogue-sort">目录排序</label><select id="catalogue-sort"><option value="recommended">推荐排序</option><option value="name">名称排序</option></select></div>
+        </div>
+        <div class="catalogue-filter-bar"><div id="catalogue-categories" class="catalogue-categories" role="group" aria-label="按工作领域筛选"></div><p id="catalogue-count" class="catalogue-count" role="status" aria-live="polite"></p></div>
+        <div id="catalogue-grid" class="catalogue-grid" role="tabpanel" aria-labelledby="tab-experts" tabindex="0"></div>
+        <div id="catalogue-empty" class="record-empty" hidden><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><h2>没有找到匹配的内容</h2><p>换个关键词，或试试其他分类。</p><button id="catalogue-clear" class="secondary-button">清除筛选</button></div>
+        <div id="catalogue-loading" class="catalogue-loading" role="status" hidden><span class="sr-only">正在读取专家目录</span><div class="catalogue-skeleton"></div><div class="catalogue-skeleton"></div><div class="catalogue-skeleton"></div></div>
+        <div id="catalogue-error" class="record-error" role="status" hidden><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><h2>暂时无法读取目录</h2><p>请重试，已填写的工作要求会保留。</p><button id="catalogue-retry" class="secondary-button">重新加载</button></div>
+      </section>
+      <section id="learn-view" aria-labelledby="learn-title" hidden>
+        <header class="learn-header"><h1 id="learn-title" tabindex="-1">学习中心</h1></header>
+        <div id="learn-content"></div>
+        <section id="learn-course-view" aria-label="课程阅读" hidden></section>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
