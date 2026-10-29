@@ -63,7 +63,9 @@ input::placeholder, textarea::placeholder { color: #777b73; opacity: 1; }
 .preview-settings p { margin: 18px 0 0; font-size: 11px; color: var(--muted); }
 .main-content { max-width: 1140px; margin: auto; padding: 46px 48px 24px; }
 body[data-view="home"] .main-content { max-width: 1144px; padding: clamp(72px, 9vh, 110px) 40px 48px; }
-.start-work-heading { text-align: center; margin-bottom: 56px; }
+.start-work-heading { text-align: center; margin-bottom: 32px; }
+.start-work-visual { width: 156px; height: 126px; position: relative; overflow: hidden; margin: 0 auto 24px; }
+.start-work-visual img { position: absolute; max-width: none; width: 489.6px; height: 293.6px; left: -165.4px; top: -81.4px; }
 .start-work-title { font-size: 32px; font-weight: 600; letter-spacing: -.8px; text-align: center; }
 .start-task-options { display: flex; gap: 9px; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #d7d9df transparent; padding: 4px 3px 6px; margin: 0 -3px 12px; }
 .start-task-chip { flex-shrink: 0; min-height: 38px; padding: 7px 17px; border: 1px solid #e5e6e9; border-radius: 22px; color: #636971; background: #fafafa; font-size: 13px; }
@@ -217,8 +219,10 @@ body[data-density="compact"] .work-section { margin-top: 22px; }
 @media (max-width: 1100px) { :root { --sidebar-width: 204px; } .main-content { padding: 36px 32px 24px; } .scenes-row { gap: 8px; } .scenes-label { display: none; } .task-status { min-width: 78px; } }
 @media (max-width: 900px) { .scene-buttons { gap: 6px; } .scene-buttons button { padding: 7px 9px; } .all-scenes { margin-left: 0; } .task-row { gap: 10px; } .task-status { min-width: 0; } .task-icon { display: none; } .detail-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) {
-  body[data-view="home"] .main-content { padding: 86px 20px 72px; }
-  .start-work-heading { margin-bottom: 36px; }
+  body[data-view="home"] .main-content { padding: 64px 20px 72px; }
+  .start-work-heading { margin-bottom: 28px; }
+  .start-work-visual { width: 122px; height: 100px; margin-bottom: 20px; }
+  .start-work-visual img { width: 385.56px; height: 231.21px; left: -130.04px; top: -63.89px; }
   .start-work-title { font-size: 26px; }
   .start-task-options { gap: 7px; }
   .start-task-chip { font-size: 12px; min-height: 40px; padding-inline: 14px; }
