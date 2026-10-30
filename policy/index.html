@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f6f8">
+  <title>惠企政策平台</title>
+  <meta name="description" content="惠企政策平台交互演示：企业档案、政策匹配、差距诊断、材料组稿与版本管理。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%230c5ce8'/%3E%3Cpath d='M11 12h18v16H11zM16 8v24m8-24v24M8 20h24' stroke='white' fill='none' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="materials.css">
+  <script defer src="demo-data.js"></script>
+  <script defer src="store.js"></script>
+  <script defer src="materials.js"></script>
+  <script defer src="views.js"></script>
+  <script defer src="chat.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#page-content">跳到主要内容</a>
+  <div class="app-shell">
+    <button class="sidebar-backdrop" aria-label="关闭菜单" data-action="close-menu" hidden></button>
+    <aside class="sidebar" id="sidebar" aria-label="主要导航">
+      <a class="brand" href="#dashboard" aria-label="惠企政策平台首页">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="22" rx="3"/><path d="M11 3v28M21 3v28M2 16h28"/></svg>
+        <span>惠企政策平台</span>
+      </a>
+      <button class="create-button" data-route="new"><span data-icon="plus"></span>创建新任务</button>
+      <nav class="primary-nav">
+        <a href="#dashboard" data-nav="dashboard"><span data-icon="grid"></span>工作台</a>
+        <a href="#services" data-nav="services"><span data-icon="layers"></span>政策服务</a>
+        <a href="#library" data-nav="library"><span data-icon="folder"></span>申报材料库</a>
+      </nav>
+      <div class="sidebar-projects"><div class="sidebar-section-heading">最近项目</div><div id="recent-projects"></div></div>
+      <div class="sidebar-bottom"><div class="demo-identity"><span class="identity-mark">企</span><div><strong>企业服务空间</strong><span>交互演示</span></div><span class="demo-dot" aria-hidden="true"></span></div><p id="storage-status" class="storage-status" aria-live="polite"></p></div>
+    </aside>
+    <div class="main-shell">
+      <header class="mobile-header"><button class="icon-button" aria-label="打开菜单" aria-expanded="false" aria-controls="sidebar" data-action="open-menu"><span data-icon="menu"></span></button><span>惠企政策平台</span><span class="mobile-demo">演示</span></header>
+      <main id="main-content"><div id="page-content" tabindex="-1"></div></main>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="noscript">请在浏览器中开启 JavaScript，以使用任务与材料版本功能。</p></noscript>
+</body>
+</html>
