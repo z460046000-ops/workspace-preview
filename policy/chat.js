@@ -5,12 +5,12 @@
   const U = () => window.PolicyUI;
   const drafts = new Map();
   const experts = {
-    profile: { id: 'company-assistant', name: '企业资料助理', subject: '企业档案', icon: 'building', portrait: [0, 0], prompts: ['企业档案还缺什么？', '哪些资料已经提供？'], placeholder: '补充企业情况，或问问档案还缺什么……' },
-    match: { id: 'policy-adviser', name: '政策匹配顾问', subject: '政策匹配', icon: 'search', portrait: [1, 0], prompts: ['为什么匹配这个政策？', '申报条件是什么？'], placeholder: '问问匹配原因、政策条件或适用范围……' },
-    diagnosis: { id: 'application-adviser', name: '申报诊断顾问', subject: '差距诊断', icon: 'check', portrait: [2, 0], prompts: ['还差哪些材料？', '应该先补什么？'], placeholder: '问问当前缺口，或需要补充哪些证明……' },
-    assembly: { id: 'material-editor', name: '材料组稿专员', subject: '材料组稿', icon: 'file', portrait: [0, 1], prompts: ['现在可以开始组稿吗？', '材料正文依据什么？'], placeholder: '说明组稿要求，或问问章节和资料来源……' },
-    review: { id: 'material-reviewer', name: '材料核对顾问', subject: '人工确认', icon: 'book', portrait: [1, 1], prompts: ['这个版本还要核对什么？', '有哪些历史版本？'], placeholder: '问问当前版本、引用来源或待核对内容……' },
-    general: { id: 'policy-adviser', name: '政策顾问', subject: '项目沟通', icon: 'book', portrait: [1, 0], prompts: ['当前项目进展如何？', '接下来先处理什么？'], placeholder: '问问项目进度、资料缺口或材料版本……' },
+    profile: { ...window.PolicyPersonas.get('profile'), subject: '企业档案', icon: 'building', prompts: ['企业档案还缺什么？', '哪些资料已经提供？'], placeholder: '补充企业情况，或问问档案还缺什么……' },
+    match: { ...window.PolicyPersonas.get('match'), subject: '政策匹配', icon: 'search', prompts: ['为什么匹配这个政策？', '申报条件是什么？'], placeholder: '问问匹配原因、政策条件或适用范围……' },
+    diagnosis: { ...window.PolicyPersonas.get('diagnosis'), subject: '差距诊断', icon: 'check', prompts: ['还差哪些材料？', '应该先补什么？'], placeholder: '问问当前缺口，或需要补充哪些证明……' },
+    assembly: { ...window.PolicyPersonas.get('assembly'), subject: '材料组稿', icon: 'file', prompts: ['现在可以开始组稿吗？', '材料正文依据什么？'], placeholder: '说明组稿要求，或问问章节和资料来源……' },
+    review: { ...window.PolicyPersonas.get('review'), subject: '人工确认', icon: 'book', prompts: ['这个版本还要核对什么？', '有哪些历史版本？'], placeholder: '问问当前版本、引用来源或待核对内容……' },
+    general: { ...window.PolicyPersonas.get('general'), subject: '项目沟通', icon: 'book', prompts: ['当前项目进展如何？', '接下来先处理什么？'], placeholder: '问问项目进度、资料缺口或材料版本……' },
   };
   const validWork = value => Object.hasOwn(experts, value) ? value : 'general';
   const versionsFor = task => S().getState().versions.filter(version => version.taskId === task.id).sort((a, b) => b.number - a.number);
@@ -111,7 +111,7 @@
     const messageHtml = message => `<p class="chat-message chat-${message.role}"><span class="sr-only">${message.role === 'user' ? '你：' : E(experts[validWork(message.workId)].name) + '：'}</span>${E(message.text)}</p>`;
     const attrs = `${action.route ? `data-route="${action.route}"` : `data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${workId}"${action.id ? ` data-id="${E(action.id)}"` : ''}`;
     return `<section class="adviser-card" data-chat-work="${workId}" aria-label="${E(expert.name)}对话">
-      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.portrait[0] * 50}%;--portrait-y:${expert.portrait[1] * 100}%"></span><div><h2>${E(expert.name)}</h2><span class="muted">${E(expert.subject)}</span></div></header>
+      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div><h2>${E(expert.name)}</h2><span class="muted">${E(expert.subject)}</span></div></header>
       <div class="chat-messages" aria-live="polite"><p class="chat-message chat-assistant chat-context">${E(answer(task, '', workId))}</p>${messages.map(messageHtml).join('')}</div>
       <div class="chat-work-action"><div><strong>${E(action.label)}</strong><p class="muted">${E(action.detail)}</p></div><button class="button button-primary" ${attrs}>${E(action.label)} ${I('arrow')}</button></div>
       ${history.length ? `<details class="chat-project-history"><summary>项目历史对话 <span>${history.length} 条</span></summary><div class="chat-messages">${history.map(messageHtml).join('')}</div></details>` : ''}

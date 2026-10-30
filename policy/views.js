@@ -5,12 +5,16 @@
   const I = (name) => window.PolicyUI?.icon ? window.PolicyUI.icon(name) : '';
   const D = () => window.PolicyData;
   const S = () => window.PolicyStore;
+  const persona = (key) => window.PolicyPersonas.get(key);
   const steps = [['profile', '企业档案', 'profile'], ['match', '政策匹配', 'policy'], ['diagnosis', '差距诊断', 'diagnosis'], ['assembly', '材料组稿', 'assembly'], ['review', '人工确认', 'assembly']];
   const statusLabels = { ready: '资料已具备', missing: '缺少资料', unmet: '条件未满足', unknown: '待核实' };
   const statusClasses = { ready: 'tag-success', missing: 'tag-warn', unmet: 'tag-warn', unknown: 'tag-muted' };
   const route = (name, label, taskId = '', policyId = '', style = 'button button-secondary') => `<button type="button" class="${style}" data-route="${E(name)}"${taskId ? ` data-task="${E(taskId)}"` : ''}${policyId ? ` data-id="${E(policyId)}"` : ''}>${E(label)}</button>`;
   const action = (name, label, taskId = '', itemId = '', style = 'button button-secondary') => `<button type="button" class="${style}" data-action="${E(name)}"${taskId ? ` data-task="${E(taskId)}"` : ''}${itemId ? ` data-id="${E(itemId)}"` : ''}>${E(label)}</button>`;
-  const avatar = (index) => `<span class="role-avatar" aria-hidden="true" data-avatar-index="${index}" style="--portrait-x:${(index % 4) / 3 * 100}%;--portrait-y:${Math.floor(index / 4) * 50}%"></span>`;
+  const avatar = (key) => {
+    const person = persona(key);
+    return `<span class="role-avatar" aria-hidden="true" data-avatar-index="${person.index}" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%;background-image:url('${person.asset}');background-size:${window.PolicyPersonas.atlas.backgroundSize}"></span>`;
+  };
   const stats = (task) => {
     const ready = task.requirements.filter((item) => item.status === 'ready').length;
     return { ready, total: task.requirements.length, gap: task.requirements.length - ready, completed: steps.filter(([key]) => task.steps[key]).length, percent: task.requirements.length ? Math.round(ready / task.requirements.length * 100) : 0 };
@@ -66,8 +70,8 @@
     }).join('');
     const emptyText = selected === 'done' ? '还没有完成准备的项目' : selected === 'mine' ? '暂时没有需要你处理的事项' : '还没有进行中的项目';
     const list = `<section class="dashboard-projects" aria-label="申报项目">${projects || `<div class="empty-state"><h2>${emptyText}</h2>${selected === 'active' ? route('new', '创建第一个项目', '', '', 'button button-primary') : '<p class="muted">可以切换到进行中，查看其他项目。</p>'}</div>`}</section>`;
-    const roles = [['企业资料助理', '整理企业画像与资料'], ['政策匹配顾问', '筛选合适的候选政策'], ['政策解读专家', '讲清条件和材料要求'], ['申报诊断顾问', '找出缺口和下一步'], ['材料组稿专员', '按模板整理已有资料'], ['办理指引顾问', '核对办理步骤与要求']];
-    const services = `<section class="dashboard-help" aria-labelledby="dashboard-help-title"><div class="section-heading"><h2 id="dashboard-help-title">需要哪方面帮助？</h2>${route('services', '全部专家', '', '', 'text-button')}</div><div class="dashboard-help-grid">${D().services.map((service, index) => `<button type="button" class="dashboard-expert-card" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}><span class="dashboard-expert-avatar" aria-hidden="true" style="--expert-x:${index % 3 * 50}%;--expert-y:${Math.floor(index / 3) * 100}%"></span><span class="dashboard-expert-copy"><strong>${E(roles[index]?.[0] || service.title)}</strong><small>${E(roles[index]?.[1] || service.output)}</small></span>${I('arrow')}</button>`).join('')}</div></section>`;
+    const roles = ['整理企业画像与资料', '筛选合适的候选政策', '讲清条件和材料要求', '找出缺口和下一步', '按模板整理已有资料', '核对办理步骤与要求'];
+    const services = `<section class="dashboard-help" aria-labelledby="dashboard-help-title"><div class="section-heading"><h2 id="dashboard-help-title">需要哪方面帮助？</h2>${route('services', '全部专家', '', '', 'text-button')}</div><div class="dashboard-help-grid">${D().services.map((service, index) => `<button type="button" class="dashboard-expert-card" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}><span class="dashboard-expert-avatar" aria-hidden="true" style="--expert-x:${persona(service.id).x}%;--expert-y:${persona(service.id).y}%"></span><span class="dashboard-expert-copy"><strong>${E(persona(service.id).name)}</strong><small>${E(roles[index] || service.output)}</small></span>${I('arrow')}</button>`).join('')}</div></section>`;
     return `${header('申报工作台')}${tabs}${list}${services}`;
   }
 
@@ -83,8 +87,7 @@
     const items = (teamMode ? D().teams : D().services).filter((item) => `${item.title} ${item.description} ${item.tags.join(' ')}`.toLocaleLowerCase().includes(needle));
     const toolbar = `<div class="services-toolbar"><div class="service-tabs" role="group" aria-label="服务类型">${action('service-tab', '单项能力', '', 'services', `service-tab${!teamMode ? ' is-active' : ''}`)}${action('service-tab', '申报协作方案', '', 'teams', `service-tab${teamMode ? ' is-active' : ''}`)}</div><form id="services-search-form" role="search" data-type="${teamMode ? 'teams' : 'services'}"><label for="service-search" class="sr-only">搜索政策服务</label><input type="search" id="service-search" name="query" maxlength="100" value="${E(query)}" placeholder="搜索能力或用途"><button type="submit" class="button button-secondary">搜索</button></form></div>`;
     const cards = items.map((item) => {
-      const serviceIndex = D().services.findIndex((service) => service.id === item.id);
-      return `<article class="service-card">${teamMode ? `<div class="team-avatar-stack">${item.serviceIds.slice(0, 3).map((serviceId) => avatar(D().services.findIndex((service) => service.id === serviceId))).join('')}</div>` : avatar(serviceIndex)}<h2>${E(item.title)}</h2><p class="service-description">${E(item.description)}</p>${teamMode ? `<ol class="team-sequence">${item.serviceIds.map((serviceId) => `<li>${E(D().services.find((service) => service.id === serviceId)?.title || serviceId)}</li>`).join('')}</ol>` : ''}<p class="service-output"><span class="muted">产出</span>${E(item.output)}</p><div class="service-card-footer"><div class="service-tags">${item.tags.map((tag) => `<span class="tag tag-muted">${E(tag)}</span>`).join('')}</div>${action(teamMode ? 'team-use' : 'service-use', '使用', current?.id || '', item.id, 'button button-primary')}</div></article>`;
+      return `<article class="service-card">${teamMode ? `<div class="team-avatar-stack">${item.serviceIds.slice(0, 3).map((serviceId) => avatar(serviceId)).join('')}</div>` : avatar(item.id)}<h2>${E(item.title)}</h2><p class="service-description">${E(item.description)}</p>${teamMode ? `<ol class="team-sequence">${item.serviceIds.map((serviceId) => `<li>${E(D().services.find((service) => service.id === serviceId)?.title || serviceId)}</li>`).join('')}</ol>` : ''}<p class="service-output"><span class="muted">产出</span>${E(item.output)}</p><div class="service-card-footer"><div class="service-tags">${item.tags.map((tag) => `<span class="tag tag-muted">${E(tag)}</span>`).join('')}</div>${action(teamMode ? 'team-use' : 'service-use', '使用', current?.id || '', item.id, 'button button-primary')}</div></article>`;
     }).join('');
     return `${header('政策服务')}${toolbar}<div class="services-grid">${cards || '<div class="empty-state"><h2>没有找到相关服务</h2><p class="muted">换个关键词试试。</p></div>'}</div>`;
   }

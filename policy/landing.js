@@ -1,4 +1,4 @@
-/* 落地页交互：固定时点的模拟政策筛选与结果展示，不访问或修改工作台资料。 */
+/* 公开政策查询、推荐与专家工作展示；只读当前项目的行业和地区。 */
 (() => {
   'use strict';
   const D = window.PolicyLandingData;
@@ -6,8 +6,8 @@
   const esc = (value = '') => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
-  const state = {region:'all', industry:'all', support:'all', status:'open', query:'', distribution:'industry', visible:6, expertTab:'experts', workStep:'profile'};
-  const statuses = {open:'申报中',upcoming:'即将开始',closed:'已截止',unknown:'时间待明确',notice:'政策公告',result:'结果公示'};
+  const state = {region:'all', industry:'all', support:'all', status:'all', query:'', distribution:'industry', visible:6, expertTab:'experts', workStep:'profile'};
+  const statuses = {open:'申报中',upcoming:'即将开始',closed:'已截止',deadline:'查看截止日',unknown:'时间待明确',notice:'政策公告',result:'结果公示'};
   let readerTrigger = null;
   const date = value => {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -19,7 +19,10 @@
     if (policy.category === '结果公示') return 'result';
     if (policy.category !== '申报通知') return 'notice';
     const start = date(policy.applicationStart), end = date(policy.applicationEnd), today = date(at);
-    if (!start || !end || !today || start > end) return 'unknown';
+    if (!today) return 'unknown';
+    if (end && today > end) return 'closed';
+    if (!start && end) return 'deadline';
+    if (!start || !end || start > end) return 'unknown';
     if (today < start) return 'upcoming';
     if (today > end) return 'closed';
     return 'open';
@@ -49,79 +52,76 @@
   const displayDate = value => date(value) ? value.replaceAll('-','.') : '待明确';
   function period(policy) {
     if (policy.category !== '申报通知') return '不适用';
+    if (!date(policy.applicationStart) && date(policy.applicationEnd)) return `截至 ${displayDate(policy.applicationEnd)}${policy.deadlineAt ? ' '+policy.deadlineAt.slice(11,16) : ''}`;
     if (!date(policy.applicationStart) || !date(policy.applicationEnd)) return '申报时间待明确';
     return `${displayDate(policy.applicationStart)} — ${displayDate(policy.applicationEnd)}`;
   }
   const statusTag = policy => `<span class="policy-status status-${classifyWindow(policy)}">${esc(statuses[classifyWindow(policy)])}</span>`;
-  function setOptions(selector, values, label) {
-    const element = $(selector);
-    if (!element) return;
-    element.innerHTML = `<option value="all">${esc(label)}</option>${values.map(value => `<option value="${esc(value)}">${esc(value === '全国' ? '全国适用' : value)}</option>`).join('')}`;
+  function recommendationProfile() {
+    const fallback = {industry:'软件信息',support:'研发支持',region:'',fromProject:false};
+    try {
+      const raw=localStorage.getItem('huiqi-policy-demo-v1');
+      if (!raw || raw.length > 5000000) return fallback;
+      const saved=JSON.parse(raw);
+      if (saved.schemaVersion !== 1 || !Array.isArray(saved.tasks) || saved.tasks.length > 500) return fallback;
+      const task=saved.tasks.find(item=>item.id === saved.activeTaskId);
+      if (!task || !task.company || typeof task.company.industry !== 'string') return fallback;
+      const text=task.company.industry.slice(0,200);
+      const mapping=[[/人工智能|AI/i,'人工智能'],[/物流|运输|供应链/,'物流行业'],[/金融|银行|保险/,'金融行业'],[/软件|信息|数字/,'软件信息'],[/制造|工业/,'先进制造'],[/能源|电力/,'新能源'],[/医疗|生物|健康/,'生命健康'],[/服务/,'现代服务']];
+      const industry=mapping.find(([pattern])=>pattern.test(text))?.[1];
+      if (!industry) return fallback;
+      const location=typeof task.company.region === 'string' ? task.company.region.slice(0,100) : '';
+      const region=[[/浙江|杭州|宁波/,'浙江省'],[/广东|深圳|广州/,'广东省'],[/北京/,'北京市'],[/上海/,'上海市']].find(([pattern])=>pattern.test(location))?.[1] || '';
+      return {...fallback,industry,region,fromProject:true};
+    } catch { return fallback; }
   }
-  function updateFilters() {
-    for (const key of ['region','industry','support','status']) {
-      const element = $(`#${key}-filter`);
-      if (element) element.value = state[key];
-    }
-    const active = ['region','industry','support'].filter(key => state[key] !== 'all');
-    const chips = active.map(key => `<button class="filter-chip" type="button" data-clear-filter="${key}" aria-label="取消${esc(state[key])}筛选">${esc(state[key])}<span aria-hidden="true">×</span></button>`);
-    if (state.query) chips.push(`<button id="search-query" class="filter-chip" type="button" data-clear-filter="query" aria-label="取消搜索${esc(state.query)}">搜索：${esc(state.query)}<span aria-hidden="true">×</span></button>`);
-    if (state.status !== 'open') chips.push(`<button class="filter-chip" type="button" data-clear-filter="status">${esc(state.status === 'all' ? '全部状态' : statuses[state.status])}<span aria-hidden="true">×</span></button>`);
-    if ($('#filter-chips')) $('#filter-chips').innerHTML = chips.join('');
-    if ($('#clear-filters')) $('#clear-filters').hidden = !chips.length;
+  const recommendation = recommendationProfile();
+  function recommendedPolicies(items) {
+    return items.filter(item=> !['closed','result'].includes(classifyWindow(item))).map(item=>{
+      const reasons=[]; let score=0;
+      if (item.industries.includes(recommendation.industry)) { score+=4; reasons.push(`行业：${recommendation.industry}`); }
+      if (recommendation.region && item.region === recommendation.region) { score+=2; reasons.push(`地区：${recommendation.region}`); }
+      if (item.supportType === recommendation.support) { score+=1; reasons.push(`方向：${recommendation.support}`); }
+      return {item,score,reasons};
+    }).filter(entry=>entry.score>0).sort((a,b)=>b.score-a.score || b.item.publishedAt.localeCompare(a.item.publishedAt)).slice(0,3);
   }
-  function renderDistribution(items) {
-    const open = items.filter(item => classifyWindow(item) === 'open');
-    const regionCount = new Set(open.map(item => item.region).filter(region => region !== '全国')).size;
-    const industries = new Set(open.flatMap(item => item.industries));
-    const counts = {open:open.length, regions:regionCount, industries:industries.size};
-    for (const [key,value] of Object.entries(counts)) {
-      const element = $(`#opportunity-summary [data-stat="${key}"]`);
-      if (element) element.textContent = String(value);
-    }
-    const national = open.filter(item => item.region === '全国').length;
-    if ($('#national-count')) $('#national-count').textContent = `其中${national}项全国适用，不重复计入各省`;
-    $$('#distribution-tabs [data-distribution]').forEach(button => {
-      const selected = button.dataset.distribution === state.distribution;
-      button.classList.toggle('is-active',selected);
-      button.setAttribute('aria-pressed',String(selected));
-    });
-    const buckets = new Map();
-    for (const item of open) {
-      const labels = state.distribution === 'industry' ? item.industries : [state.distribution === 'region' ? item.region : item.supportType];
-      for (const label of new Set(labels)) buckets.set(label,(buckets.get(label) || 0)+1);
-    }
-    const entries = [...buckets].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0],'zh-CN'));
-    const max = Math.max(1,...entries.map(([,count]) => count));
-    if ($('#distribution-chart')) $('#distribution-chart').innerHTML = entries.length ? entries.map(([label,count],index) => `<button class="distribution-row" type="button" data-filter-kind="${esc(state.distribution)}" data-filter-value="${esc(label)}" aria-label="筛选${esc(label)}，${count}项申报中项目"><span class="distribution-label">${esc(label === '全国' ? '全国适用' : label)}</span><span class="distribution-track" aria-hidden="true"><span class="distribution-bar bar-${index}" style="width:${count/max*100}%"></span></span><span class="distribution-value">${count}<small>项</small></span></button>`).join('') : '<div class="distribution-empty"><strong>当前范围暂无申报中项目</strong><p>更换筛选条件，或在下方查看其他状态的政策。</p></div>';
-    if ($('#distribution-note')) $('#distribution-note').textContent = state.distribution === 'industry' ? '仅统计申报中项目；一个项目可对应多个行业，各项数量不相加。' : state.distribution === 'region' ? '省级口径；全国适用项目单列，不重复计入各省。' : '每项按主要支持类型统计，仅包含申报窗口开放的项目。';
+  function renderDistribution() {
+    const total=$('#opportunity-summary [data-stat="total"]');
+    if (total) total.textContent=String(policies.length);
+    const counts=new Map();
+    for (const policy of policies) counts.set(policy.supportType,(counts.get(policy.supportType)||0)+1);
+    const maximum=Math.max(1,...counts.values());
+    if ($('#distribution-chart')) $('#distribution-chart').innerHTML=[...counts].sort((a,b)=>b[1]-a[1]).map(([label,count],index)=>`<div class="distribution-row"><span class="distribution-label">${esc(label)}</span><span class="distribution-track" aria-hidden="true"><span class="distribution-bar bar-${index}" style="width:${count/maximum*100}%"></span></span><span class="distribution-value">${count}<small>项</small></span></div>`).join('');
+    if ($('#region-summary')) $('#region-summary').innerHTML=[...new Set(policies.map(item=>item.region))].map(region=>`<span>${esc(region === '全国' ? '全国适用' : region)}</span>`).join('');
+  }
+  function dates(policy) {
+    return `<dl class="policy-row-dates"><div><dt>发布</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div>${policy.category === '申报通知' ? `<div><dt>申报</dt><dd>${esc(period(policy))}</dd></div>` : ''}</dl>`;
   }
   function renderPolicies(items) {
-    if ($('#policy-list')) $('#policy-list').innerHTML = items.slice(0,state.visible).map((item,index) => `<article class="policy-row${index < 3 ? ' policy-row-featured' : ''}"><div class="policy-row-copy"><div class="policy-meta"><span>${esc(item.region === '全国' ? '全国适用' : item.region)}</span><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3>${index < 3 ? `<p class="policy-summary">${esc(item.summary)}</p>` : ''}<p class="policy-agency">${esc(item.agency)} · ${esc(item.category)}</p></div><dl class="policy-row-dates"><div><dt>发布时间</dt><dd>${esc(displayDate(item.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(item))}</dd></div></dl><button class="policy-row-open" type="button" data-policy-id="${esc(item.id)}" aria-label="查看${esc(item.title)}">${arrow}</button></article>`).join('');
-    if ($('#policy-empty')) $('#policy-empty').hidden = items.length > 0;
-    if ($('#policy-count')) $('#policy-count').textContent = `${items.length}项政策`;
-    if ($('#show-more-policies')) { $('#show-more-policies').hidden = state.visible >= items.length; $('#show-more-policies').textContent = `再看${Math.min(6,Math.max(0,items.length-state.visible))}项`; }
+    if ($('#policy-list')) $('#policy-list').innerHTML=items.slice(0,state.visible).map(item=>`<article class="policy-row"><div class="policy-row-copy"><div class="policy-meta"><span>${esc(item.region === '全国' ? '全国适用' : item.region)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3><p class="policy-agency">${esc(item.agency)}</p></div>${dates(item)}<button class="policy-row-open" type="button" data-policy-id="${esc(item.id)}" aria-label="查看${esc(item.title)}">${arrow}</button></article>`).join('');
+    if ($('#policy-empty')) $('#policy-empty').hidden=items.length>0;
+    if ($('#policy-count')) $('#policy-count').textContent=`${items.length}项`;
+    if ($('#show-more-policies')) { $('#show-more-policies').hidden=state.visible>=items.length; $('#show-more-policies').textContent=`再看${Math.min(6,Math.max(0,items.length-state.visible))}项`; }
+    if ($('#recommendation-context')) $('#recommendation-context').textContent=`${recommendation.fromProject ? '参考当前项目' : '推荐方向'}：${recommendation.industry} · ${recommendation.support}`;
+    const entries=recommendedPolicies(items);
+    if ($('#recommended-policy-list')) $('#recommended-policy-list').innerHTML=entries.map(({item,reasons},index)=>`<article class="recommendation-card"><div class="policy-meta"><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3>${index===0 ? `<p>${esc(item.summary)}</p>` : ''}<p class="recommendation-reason"><strong>推荐依据</strong><br>${reasons.map(esc).join(' · ')}</p>${dates(item)}<button class="text-button" type="button" data-policy-id="${esc(item.id)}">查看政策 ${arrow}</button></article>`).join('') || '<p class="recommendation-empty">当前关键词下暂无推荐，试试其他政策方向。</p>';
   }
   function render() {
-    const items = filterPolicies();
-    updateFilters();
-    renderDistribution(items);
-    renderPolicies(items);
-    if ($('#hero-query-status')) $('#hero-query-status').textContent = state.query ? `查找“${state.query}”：当前条件下找到${items.length}项。` : '';
+    const items=filterPolicies();
+    renderDistribution(); renderPolicies(items);
+    if ($('#hero-query-status')) $('#hero-query-status').textContent=state.query ? `“${state.query}” · 找到${items.length}项政策` : '';
     if ($('#policy-reader') && !$('#policy-reader').hidden) closeReader(false);
   }
   function changeFilter(key,value) {
-    if (!['region','industry','support','status','query'].includes(key)) return;
-    state[key] = value;
-    state.visible = 6;
-    render();
+    if (key !== 'query') return;
+    state.query=value; state.visible=6; render();
   }
   function openReader(id,trigger) {
     const policy = policies.find(item => item.id === id);
     const reader = $('#policy-reader');
     if (!policy || !reader) return;
     readerTrigger = trigger;
-    reader.innerHTML = `<div class="policy-reader-head"><button id="policy-reader-close" class="text-button" type="button">收起详情 <span aria-hidden="true">×</span></button></div><div class="policy-meta"><span>${esc(policy.region === '全国' ? '全国适用' : policy.region)}</span><span>${esc(policy.category)}</span>${statusTag(policy)}</div><h3>${esc(policy.title)}</h3><p>${esc(policy.summary)}</p><dl class="policy-dates"><div><dt>发布部门</dt><dd>${esc(policy.agency)}</dd></div><div><dt>发布日期</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(policy))}</dd></div></dl><div class="policy-reader-columns"><section><h4>先核对这些条件</h4><ul>${policy.conditions.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section><section><h4>需要准备的材料</h4><ul>${policy.materials.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section></div><div class="policy-reader-foot"><p>来源：演示政策模板</p><a class="button button-primary" href="index.html#new">创建申报准备任务 ${arrow}</a></div>`;
+    reader.innerHTML = `<div class="policy-reader-head"><button id="policy-reader-close" class="text-button" type="button">收起详情 <span aria-hidden="true">×</span></button></div><div class="policy-meta"><span>${esc(policy.region === '全国' ? '全国适用' : policy.region)}</span><span>${esc(policy.category)}</span>${statusTag(policy)}</div><h3>${esc(policy.title)}</h3><p>${esc(policy.summary)}</p><dl class="policy-dates"><div><dt>发布部门</dt><dd>${esc(policy.agency)}</dd></div><div><dt>发布日期</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(policy))}</dd></div></dl><div class="policy-reader-columns"><section><h4>先核对这些条件</h4><ul>${policy.conditions.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section><section><h4>需要准备的材料</h4><ul>${policy.materials.map(item => `<li>${esc(item)}</li>`).join('') || '<li>按主管部门对应申报指南核对。</li>'}</ul></section></div><div class="policy-reader-foot"><p>来源：${esc(policy.agency)} · <a href="${esc(policy.sourceUrl)}" target="_blank" rel="noopener noreferrer">查看政策原文</a></p><a class="button button-primary" href="index.html#new">创建申报准备任务 ${arrow}</a></div>`;
     reader.hidden = false;
     reader.focus({preventScroll:true});
     reader.scrollIntoView?.({behavior:'instant',block:'nearest'});
@@ -175,30 +175,21 @@
       if (focus && selected) button.focus();
     });
     if ($('#work-preview')) $('#work-preview').setAttribute('aria-labelledby',`step-${step}`);
-    if ($('#work-preview')) $('#work-preview').innerHTML = `<div class="work-chat"><div class="work-message message-user"><span>企业</span><p>${esc(data.user)}</p></div><div class="work-message message-adviser"><span>政策顾问</span><p>${esc(data.reply)}</p></div><a class="text-button" href="index.html#task?task=task-innovation&amp;work=${data.link}">${esc(data.action)} ${arrow}</a></div><div class="work-result"><div class="work-result-title">${check}<h3>${esc(data.result)}</h3></div><dl>${data.lines.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></div>`;
+    const expert=window.PolicyPersonas.get(step);
+    const personStyle=`--portrait-x:${expert.x}%;--portrait-y:${expert.y}%`;
+    if ($('#work-preview')) $('#work-preview').innerHTML = `<div class="work-chat"><header class="chat-preview-heading"><strong>${esc(data.title)}</strong></header><div class="work-message message-user"><span class="work-chat-avatar work-user-avatar" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M5 21V4h14v17M2 21h20M9 8h1m4 0h1M9 12h1m4 0h1M10 21v-5h4v5"/></svg></span><div class="work-message-body"><span>企业负责人</span><p>${esc(data.user)}</p></div></div><div class="work-message message-adviser"><span class="work-chat-avatar portrait" style="${personStyle}" aria-hidden="true"></span><div class="work-message-body"><span>${esc(expert.name)}</span><p>${esc(data.reply)}</p></div></div><a class="text-button work-chat-entry" href="index.html#task?task=task-innovation&amp;work=${data.link}">${esc(data.action)} ${arrow}</a></div><div class="work-result"><div class="work-result-title">${check}<h3>${esc(data.result)}</h3></div><dl>${data.lines.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></div>`;
   }
   function renderCases() {
-    if ($('#case-grid')) $('#case-grid').innerHTML = D.cases.map((item,index) => `<article class="case-card case-card-${index}"><div class="case-meta"><span>${esc(item.region)} · ${esc(item.industry)}</span><span>模拟案例</span></div><h3 class="case-company">${esc(item.company)}</h3><div class="case-support"><strong>${esc(item.amountLabel)}</strong><span>${esc(item.status)} · ${esc(item.supportLabel)}</span></div><p class="case-project">${esc(item.project)}</p><div class="case-story"><h4>平台协助完成</h4><ol>${item.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></div><a class="case-link" href="index.html#task?task=${esc(item.taskId)}">查看同类准备流程 ${arrow}</a></article>`).join('');
+    if ($('#case-grid')) $('#case-grid').innerHTML = D.cases.map((item,index) => `<article class="case-card case-card-${index}"><div class="case-meta"><span>${esc(item.industry)}</span><span>${esc(item.direction)}</span></div><h3 class="case-company">${esc(item.title)}</h3><div class="case-outcome">${esc(item.outcome)}</div><p class="case-project">${esc(item.description)}</p><div class="case-story"><h4>准备重点</h4><ol>${item.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></div><a class="case-link" href="index.html#task?task=${esc(item.taskId)}">查看准备流程 ${arrow}</a></article>`).join('');
   }
+
   function closeMenu() {
     $('#menu-toggle')?.setAttribute('aria-expanded','false');
     $('#landing-nav')?.classList.remove('is-open');
     document.body.classList.remove('landing-menu-open');
   }
   function init() {
-    setOptions('#region-filter',D.regions,'全部地区');
-    setOptions('#industry-filter',D.industries,'全部行业');
-    setOptions('#support-filter',D.supportTypes,'全部支持类型');
-    const status = $('#status-filter');
-    if (status) status.innerHTML = '<option value="all">全部状态</option>'+Object.entries(statuses).map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
-    renderExperts();
-    renderCases();
-    selectWorkStep(state.workStep);
-    render();
-    $('#opportunity-filters')?.addEventListener('change',event => {
-      const key = { 'region-filter':'region','industry-filter':'industry','support-filter':'support','status-filter':'status' }[event.target.id];
-      if (key) changeFilter(key,event.target.value);
-    });
+    renderExperts(); renderCases(); selectWorkStep(state.workStep); render();
     $('#hero-query-form')?.addEventListener('submit',event => {
       event.preventDefault();
       const input = event.currentTarget.querySelector('[name="query"]');
@@ -215,18 +206,7 @@
         document.body.classList.toggle('landing-menu-open',!expanded);
       }
       if (target.closest('#landing-nav') && target.tagName === 'A') closeMenu();
-      if (target.dataset.distribution) { state.distribution = target.dataset.distribution; renderDistribution(filterPolicies()); }
-      if (target.dataset.filterKind) changeFilter(target.dataset.filterKind,state[target.dataset.filterKind] === target.dataset.filterValue ? 'all' : target.dataset.filterValue);
-      if (target.dataset.clearFilter) {
-        const key = target.dataset.clearFilter;
-        changeFilter(key,key === 'status' ? 'open' : key === 'query' ? '' : 'all');
-        if (key === 'query' && $('#hero-query-form [name="query"]')) $('#hero-query-form [name="query"]').value = '';
-      }
-      if (target.id === 'clear-filters') {
-        Object.assign(state,{region:'all',industry:'all',support:'all',status:'open',query:'',visible:6});
-        if ($('#hero-query-form [name="query"]')) $('#hero-query-form [name="query"]').value = '';
-        render();
-      }
+      if (target.id === 'clear-search') { state.query=''; if ($('#hero-query')) $('#hero-query').value=''; state.visible=6; render(); }
       if (target.id === 'show-more-policies') { state.visible += 6; renderPolicies(filterPolicies()); }
       if (target.dataset.policyId) openReader(target.dataset.policyId,target);
       if (target.id === 'policy-reader-close') closeReader();
@@ -245,6 +225,6 @@
       if (expert) selectExpertTab(tabs[next].dataset.expertTab,true); else selectWorkStep(tabs[next].dataset.workStep,true);
     });
   }
-  window.PolicyLanding = Object.freeze({classifyWindow,uniquePolicies,filterPolicies,getState:() => ({...state}),getAsOf:() => asOf});
+  window.PolicyLanding = Object.freeze({classifyWindow,uniquePolicies,filterPolicies,getState:() => ({...state}),getAsOf:() => asOf,recommendedPolicies,getRecommendationProfile:()=>({...recommendation})});
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();

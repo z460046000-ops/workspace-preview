@@ -2,10 +2,10 @@
 (() => {
   'use strict';
   const definitions = [
-    ['profile','企业档案','企业资料助理'],
-    ['match','政策匹配','政策匹配顾问'],
-    ['diagnosis','差距诊断','申报诊断顾问'],
-    ['assembly','材料组稿','材料组稿专员'],
+    ['profile','企业档案',window.PolicyPersonas.get('profile').name],
+    ['match','政策匹配',window.PolicyPersonas.get('match').name],
+    ['diagnosis','差距诊断',window.PolicyPersonas.get('diagnosis').name],
+    ['assembly','材料组稿',window.PolicyPersonas.get('assembly').name],
     ['review','人工确认','企业负责人'],
   ];
   const ranks = {waiting:0,review:0,ready:1,blocked:2,done:3};
@@ -95,10 +95,9 @@
     const items=orderedItems(task,selected),item=items.find(i=>i.id === selected);
     const count=definitions.filter(([id])=>task.steps[id]).length;
     const isChat=route === 'task';
-    const cardPortrait = {profile:[0,0],match:[1,0],diagnosis:[2,0],assembly:[0,1]};
     const cards = items.map(work => {
-      const portrait = cardPortrait[work.id];
-      const avatar = portrait ? `<span class="work-expert-avatar" aria-hidden="true" style="--expert-x:${portrait[0]*50}%;--expert-y:${portrait[1]*100}%"></span>` : `<span class="work-human-avatar" aria-hidden="true">${I('building')}</span>`;
+      const persona = window.PolicyPersonas.get(work.id);
+      const avatar = work.id !== 'review' ? `<span class="work-expert-avatar" aria-hidden="true" style="--expert-x:${persona.x}%;--expert-y:${persona.y}%"></span>` : `<span class="work-human-avatar" aria-hidden="true">${I('building')}</span>`;
       return `<button class="work-status-card${work.id === selected ? ' is-selected' : ''}" data-status="${work.status}" data-route="task" data-task="${E(task.id)}" data-work="${work.id}" aria-label="${E(work.owner)}，${E(work.title)}，${E(work.label)}"${work.id === selected ? ' aria-current="true"' : ''}><div class="work-status-top"><span>${E(work.title)}</span><span>${E(work.label)}</span></div><div class="work-expert-identity">${avatar}<h2>${E(work.owner)}</h2></div><p>${E(work.reason)}</p></button>`;
     }).join('');
     return `<div class="project-workspace"><header class="project-workspace-header"><div class="project-heading"><button class="icon-button" data-route="dashboard" aria-label="查看所有项目">${I('arrow')}</button><div><h1>${E(task.title)}</h1><p class="muted">${E(task.company.name || '企业档案待填写')}</p></div></div><div class="project-progress"><div><span>申报准备进度</span><strong>${Math.round(count/5*100)}<small>%</small></strong></div><progress value="${count}" max="5" aria-label="申报准备进度：${count}/5 项工作已完成"></progress><small>${count}/5 项工作已完成</small></div></header><nav class="workspace-status-grid" aria-label="项目专家与负责事项">${cards}</nav><div class="workspace-body"><section class="workspace-main" aria-label="${E(item.title)}处理区"><div class="workspace-work-heading"><div><h2>${E(item.title)}</h2><span class="muted">${E(item.label)}</span></div><div class="workspace-tabs" aria-label="工作视图"><button data-action="workspace-tab" data-id="chat" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? 'is-active' : ''}" aria-pressed="${isChat}">专家对话</button><button data-action="workspace-tab" data-id="content" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? '' : 'is-active'}" aria-pressed="${!isChat}">工作内容</button></div></div>${isChat ? window.PolicyChat.render(task.id,selected) : `<div class="workspace-content">${documentContent(content)}</div>`}</section>${renderContext(task,item)}</div></div>`;
