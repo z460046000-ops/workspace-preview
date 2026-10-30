@@ -36,12 +36,22 @@
     return [...seen.values()];
   }
   const policies = uniquePolicies(D.policies);
+  const industryPolicyIds = {
+    '人工智能': new Set(['gd-ai-2027', 'cn-tech-commerce-2026']),
+    '金融行业': new Set(['cn-finance-2025']),
+  };
+  function matchesIndustry(policy, industry) {
+    if (!industry || industry === 'all') return true;
+    if (industry === '物流行业') return /物流/.test(`${policy.title} ${policy.summary}`);
+    if (industryPolicyIds[industry]) return industryPolicyIds[industry].has(policy.id);
+    return policy.industries.includes(industry);
+  }
   function filterPolicies(filters = state, input = policies) {
     const terms = String(filters.query || '').trim().toLocaleLowerCase('zh-CN').split(/\s+/).filter(Boolean);
     return uniquePolicies(input).filter(policy => {
       const haystack = [policy.title,policy.region,policy.supportType,policy.summary,...policy.industries].join(' ').toLocaleLowerCase('zh-CN');
       return (!filters.region || filters.region === 'all' || policy.region === filters.region)
-        && (!filters.industry || filters.industry === 'all' || policy.industries.includes(filters.industry))
+        && matchesIndustry(policy,filters.industry)
         && (!filters.support || filters.support === 'all' || policy.supportType === filters.support)
         && (!filters.status || filters.status === 'all' || classifyWindow(policy) === filters.status)
         && terms.every(term => haystack.includes(term));
@@ -76,23 +86,46 @@
     } catch { return fallback; }
   }
   const recommendation = recommendationProfile();
+  function currentRecommendation() {
+    return {...recommendation,
+      industry:state.industry !== 'all' ? state.industry : recommendation.industry,
+      region:state.region !== 'all' ? state.region : recommendation.region,
+      support:state.support !== 'all' ? state.support : recommendation.support,
+    };
+  }
   function recommendedPolicies(items) {
+    const preference=currentRecommendation();
     return items.filter(item=> !['closed','result'].includes(classifyWindow(item))).map(item=>{
       const reasons=[]; let score=0;
-      if (item.industries.includes(recommendation.industry)) { score+=4; reasons.push(`行业：${recommendation.industry}`); }
-      if (recommendation.region && item.region === recommendation.region) { score+=2; reasons.push(`地区：${recommendation.region}`); }
-      if (item.supportType === recommendation.support) { score+=1; reasons.push(`方向：${recommendation.support}`); }
+      if (matchesIndustry(item,preference.industry)) { score+=4; reasons.push(`行业：${preference.industry}`); }
+      if (preference.region && item.region === preference.region) { score+=2; reasons.push(`地区：${preference.region}`); }
+      if (item.supportType === preference.support) { score+=1; reasons.push(`方向：${preference.support}`); }
       return {item,score,reasons};
     }).filter(entry=>entry.score>0).sort((a,b)=>b.score-a.score || b.item.publishedAt.localeCompare(a.item.publishedAt)).slice(0,3);
   }
-  function renderDistribution() {
+  function renderDistribution(items) {
     const total=$('#opportunity-summary [data-stat="total"]');
-    if (total) total.textContent=String(policies.length);
+    if (total) total.textContent=String(items.length);
     const counts=new Map();
-    for (const policy of policies) counts.set(policy.supportType,(counts.get(policy.supportType)||0)+1);
+    for (const policy of policies) counts.set(policy.supportType,0);
+    for (const policy of filterPolicies({...state,support:'all'})) counts.set(policy.supportType,(counts.get(policy.supportType)||0)+1);
     const maximum=Math.max(1,...counts.values());
-    if ($('#distribution-chart')) $('#distribution-chart').innerHTML=[...counts].sort((a,b)=>b[1]-a[1]).map(([label,count],index)=>`<div class="distribution-row"><span class="distribution-label">${esc(label)}</span><span class="distribution-track" aria-hidden="true"><span class="distribution-bar bar-${index}" style="width:${count/maximum*100}%"></span></span><span class="distribution-value">${count}<small>项</small></span></div>`).join('');
-    if ($('#region-summary')) $('#region-summary').innerHTML=[...new Set(policies.map(item=>item.region))].map(region=>`<span>${esc(region === '全国' ? '全国适用' : region)}</span>`).join('');
+    if ($('#distribution-chart')) $('#distribution-chart').innerHTML=[...counts].sort((a,b)=>b[1]-a[1]).map(([label,count],index)=>`<button type="button" class="distribution-row${state.support === label ? ' is-active' : ''}" data-support="${esc(label)}" aria-pressed="${state.support === label}" aria-label="${esc(label)}，${count}项"><span class="distribution-label">${esc(label)}</span><span class="distribution-track" aria-hidden="true"><span class="distribution-bar bar-${index}" style="width:${count/maximum*100}%"></span></span><span class="distribution-value">${count}<small>项</small></span></button>`).join('');
+    const regionCounts=new Map([...new Set(policies.map(item=>item.region))].map(region=>[region,0]));
+    for (const policy of filterPolicies({...state,region:'all'})) regionCounts.set(policy.region,(regionCounts.get(policy.region)||0)+1);
+    if ($('#region-summary')) $('#region-summary').innerHTML=[...regionCounts].map(([region,count])=>`<button type="button" data-region="${esc(region)}" aria-pressed="${state.region === region}" class="${state.region === region ? 'is-active' : ''}">${esc(region === '全国' ? '全国适用' : region)}<span>${count}项</span></button>`).join('');
+    $$('[data-industry]').forEach(button=>{
+      const selected=button.dataset.industry === state.industry;
+      button.setAttribute('aria-pressed',String(selected));
+      button.classList.toggle('is-active',selected);
+    });
+    const selected=[];
+    if (state.industry !== 'all') selected.push(state.industry);
+    if (state.region !== 'all') selected.push(state.region === '全国' ? '全国适用' : state.region);
+    if (state.support !== 'all') selected.push(state.support);
+    if (state.query) selected.push(`关键词“${state.query}”`);
+    if ($('#selection-summary')) $('#selection-summary').textContent=`${selected.length ? '当前范围：'+selected.join(' · ') : '全部政策'} · ${items.length}项`;
+    if ($('#reset-selection')) $('#reset-selection').hidden=!selected.length;
   }
   function dates(policy) {
     return `<dl class="policy-row-dates"><div><dt>发布</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div>${policy.category === '申报通知' ? `<div><dt>申报</dt><dd>${esc(period(policy))}</dd></div>` : ''}</dl>`;
@@ -102,19 +135,29 @@
     if ($('#policy-empty')) $('#policy-empty').hidden=items.length>0;
     if ($('#policy-count')) $('#policy-count').textContent=`${items.length}项`;
     if ($('#show-more-policies')) { $('#show-more-policies').hidden=state.visible>=items.length; $('#show-more-policies').textContent=`再看${Math.min(6,Math.max(0,items.length-state.visible))}项`; }
-    if ($('#recommendation-context')) $('#recommendation-context').textContent=`${recommendation.fromProject ? '参考当前项目' : '推荐方向'}：${recommendation.industry} · ${recommendation.support}`;
+    const preference=currentRecommendation();
+    const hasSelection=[state.industry,state.region,state.support].some(value=>value !== 'all');
+    if ($('#recommendation-context')) $('#recommendation-context').textContent=`${hasSelection ? '按所选范围推荐' : recommendation.fromProject ? '参考当前项目' : '推荐方向'}：${[preference.industry,preference.region,preference.support].filter(Boolean).join(' · ')}`;
     const entries=recommendedPolicies(items);
-    if ($('#recommended-policy-list')) $('#recommended-policy-list').innerHTML=entries.map(({item,reasons},index)=>`<article class="recommendation-card"><div class="policy-meta"><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3>${index===0 ? `<p>${esc(item.summary)}</p>` : ''}<p class="recommendation-reason"><strong>推荐依据</strong><br>${reasons.map(esc).join(' · ')}</p>${dates(item)}<button class="text-button" type="button" data-policy-id="${esc(item.id)}">查看政策 ${arrow}</button></article>`).join('') || '<p class="recommendation-empty">当前关键词下暂无推荐，试试其他政策方向。</p>';
+    if ($('#recommended-policy-list')) $('#recommended-policy-list').innerHTML=entries.map(({item,reasons},index)=>`<article class="recommendation-card"><div class="policy-meta"><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3>${index===0 ? `<p>${esc(item.summary)}</p>` : ''}<p class="recommendation-reason"><strong>推荐依据</strong><br>${reasons.map(esc).join(' · ')}</p>${dates(item)}<button class="text-button" type="button" data-policy-id="${esc(item.id)}">查看政策 ${arrow}</button></article>`).join('') || '<p class="recommendation-empty">当前范围内暂无推荐，试试其他行业、地区或关键词。</p>';
   }
   function render() {
     const items=filterPolicies();
-    renderDistribution(); renderPolicies(items);
+    renderDistribution(items); renderPolicies(items);
     if ($('#hero-query-status')) $('#hero-query-status').textContent=state.query ? `“${state.query}” · 找到${items.length}项政策` : '';
     if ($('#policy-reader') && !$('#policy-reader').hidden) closeReader(false);
   }
   function changeFilter(key,value) {
-    if (key !== 'query') return;
-    state.query=value; state.visible=6; render();
+    if (!['query','industry','region','support'].includes(key)) return;
+    state[key]=key !== 'query' && state[key] === value ? 'all' : value;
+    state.visible=6;
+    render();
+    if (key !== 'query') $$(`[data-${key}]`).find(button=>button.dataset[key] === value)?.focus({preventScroll:true});
+  }
+  function resetSelection() {
+    Object.assign(state,{region:'all',industry:'all',support:'all',status:'all',query:'',visible:6});
+    if ($('#hero-query')) $('#hero-query').value='';
+    render();
   }
   function openReader(id,trigger) {
     const policy = policies.find(item => item.id === id);
@@ -194,7 +237,7 @@
       event.preventDefault();
       const input = event.currentTarget.querySelector('[name="query"]');
       changeFilter('query',String(input?.value || '').trim().slice(0,100));
-      $('#opportunities')?.scrollIntoView?.({behavior:'instant',block:'start'});
+      $('#policy-feed')?.scrollIntoView?.({behavior:'instant',block:'start'});
     });
     document.addEventListener('click',event => {
       const target = event.target.closest('button,a');
@@ -206,7 +249,9 @@
         document.body.classList.toggle('landing-menu-open',!expanded);
       }
       if (target.closest('#landing-nav') && target.tagName === 'A') closeMenu();
-      if (target.id === 'clear-search') { state.query=''; if ($('#hero-query')) $('#hero-query').value=''; state.visible=6; render(); }
+      const filterKey=['industry','region','support'].find(key=>Object.hasOwn(target.dataset,key));
+      if (filterKey) { changeFilter(filterKey,target.dataset[filterKey]); $('#policy-feed')?.scrollIntoView?.({behavior:'instant',block:'start'}); }
+      if (target.id === 'reset-selection' || target.id === 'clear-search') { resetSelection(); $('#policy-feed')?.scrollIntoView?.({behavior:'instant',block:'start'}); }
       if (target.id === 'show-more-policies') { state.visible += 6; renderPolicies(filterPolicies()); }
       if (target.dataset.policyId) openReader(target.dataset.policyId,target);
       if (target.id === 'policy-reader-close') closeReader();
