@@ -200,18 +200,18 @@
  .preview-company h2,.preview-company>strong{font-size:21px}
  .expert-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:47px 20px}
  .expert-portrait{right:0;width:225px;height:225px}
- 
- 
+
+
 }
 @media(max-width:850px){
  .hero-project-preview{max-width:600px;width:100%;justify-self:center;padding:26px}
  .expert-copy{width:58%;padding-left:19px}
  .expert-copy h4{font-size:19px}
  .expert-portrait{width:215px;height:215px;right:-10px}
- 
- 
- 
- 
+
+
+
+
 }
 @media(max-width:620px){
  .hero-project-preview{padding:23px 20px;max-width:none}
@@ -230,15 +230,15 @@
  .expert-tags{font-size:9px;gap:5px;margin-top:11px}
  .expert-action{font-size:11px;gap:12px}
  .expert-portrait{width:225px;height:225px;right:-7px}
- 
- 
- 
- 
- 
- 
- 
- 
- 
+
+
+
+
+
+
+
+
+
  .message-user{flex-direction:row-reverse;align-self:flex-end;padding:0}
  .message-adviser{align-self:flex-start}
  .work-message{width:94%}
