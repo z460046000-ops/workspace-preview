@@ -11,6 +11,8 @@
   const id = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value) ? value : null;
   const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null;
   const stepNames = ['profile', 'match', 'diagnosis', 'assembly', 'review'];
+  const workNames = [...stepNames, 'general'];
+  const expertIds = { profile: 'company-assistant', match: 'policy-adviser', diagnosis: 'application-adviser', assembly: 'material-editor', review: 'material-reviewer', general: 'policy-adviser' };
   const statuses = ['ready', 'missing', 'unmet', 'unknown'];
   const taskStatuses = ['needs-input', 'processing', 'review', 'done'];
   const policyExists = (value) => DATA.policies.some((policy) => policy.id === value);
@@ -62,7 +64,11 @@
       status: taskStatuses.includes(value.status) ? value.status : 'needs-input',
       steps: Object.fromEntries(stepNames.map((name) => [name, value.steps[name]])), requirements, sources,
       createdAt, updatedAt, notes: text(value.notes),
-      messages: Array.isArray(value.messages) ? value.messages.filter(message=>plain(message) && ['user','assistant'].includes(message.role) && typeof message.text === 'string').slice(-40).map(message=>({role:message.role,text:text(message.text,'',5000)})) : [],
+      selectedWorkId: workNames.includes(value.selectedWorkId) ? value.selectedWorkId : 'general',
+      messages: Array.isArray(value.messages) ? value.messages.filter(message => plain(message) && ['user', 'assistant'].includes(message.role) && typeof message.text === 'string').slice(-1000).map(message => {
+        const workId = workNames.includes(message.workId) ? message.workId : 'general';
+        return { role: message.role, text: text(message.text, '', 5000), workId, expertId: id(message.expertId) || expertIds[workId] };
+      }) : [],
     };
   }
 
@@ -162,7 +168,7 @@
     const original = getTask(taskId);
     if (!original || !plain(patch)) return false;
     const merged = { ...original };
-    ['title', 'request', 'policyId', 'status', 'requirements', 'sources', 'notes', 'messages'].forEach((key) => {
+    ['title', 'request', 'policyId', 'status', 'requirements', 'sources', 'notes', 'messages', 'selectedWorkId'].forEach((key) => {
       if (Object.hasOwn(patch, key)) merged[key] = patch[key];
     });
     if (Object.hasOwn(patch, 'company')) {

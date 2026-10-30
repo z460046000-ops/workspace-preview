@@ -35,23 +35,40 @@
   const mockScore = (policy) => `<div class="mock-score"><div><span class="muted">预估申报成功率</span><strong>${E(policy.mockSuccess)}<small>%</small></strong></div><div><span class="tag tag-muted">模拟值</span><p class="muted">仅作演示，不代表获批判断。</p></div></div>`;
   const field = (label, name, value = '', options = {}) => `<label class="form-field" for="field-${E(name)}"><span>${E(label)}${options.required ? '<span aria-hidden="true"> *</span>' : ''}</span><input id="field-${E(name)}" name="${E(name)}" type="${E(options.type || 'text')}" maxlength="${options.max || 200}" value="${E(value)}"${options.required ? ' required' : ''}${options.placeholder ? ` placeholder="${E(options.placeholder)}"` : ''}${options.type === 'number' ? ' min="0" step="1"' : ''}></label>`;
 
-  function dashboard() {
+  function dashboard({ filter = 'active' } = {}) {
     const tasks = S().getState().tasks;
     const current = activeTask();
-    let focus = '';
-    if (current) {
-      const count = stats(current);
-      focus = `<section class="focus-panel" aria-label="当前项目"><div class="focus-main"><h2>${E(current.title)}</h2><p class="muted">${E(current.company.name || '企业档案待填写')}</p><p class="focus-next">${E(missingSummary(current))}</p>${progress(current)}<div class="focus-actions">${route(nextRoute(current), '继续准备', current.id, '', 'button button-primary')}${route('task', '查看项目', current.id, '', 'text-button')}</div></div><div class="focus-side"><p>申报准备情况</p><div class="readiness-value">${count.percent}<span>%</span></div><p class="muted">已具备 ${count.ready}/${count.total} 项</p>${route('diagnosis', '查看缺口', current.id, '', 'text-button')}</div></section>`;
-    } else focus = `<section class="focus-panel"><div class="focus-main"><h2>从一项申报目标开始</h2><p class="muted">填写企业信息，逐项准备需要的资料。</p>${route('new', '创建新任务', '', '', 'button button-primary')}</div></section>`;
-    const services = `<section class="capability-section" aria-label="政策服务"><div class="section-heading"><h2>需要哪方面帮助？</h2>${route('services', '全部服务', '', '', 'text-button')}</div><div class="capability-strip">${D().services.map((service, index) => `<button type="button" class="capability-item" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}>${avatar(index)}<span>${E(service.title)}</span></button>`).join('')}</div></section>`;
-    const columns = [['needs-input', '待补资料'], ['processing', '处理中'], ['review', '待确认']];
-    const board = `<section class="board-section" aria-labelledby="board-title"><div class="section-heading"><h2 id="board-title">申报项目</h2><span class="muted">${tasks.length} 个项目</span></div><div class="task-board">${columns.map(([status, title]) => {
-      const group = tasks.filter((task) => workflowState(task) === status);
-      return `<section class="board-column"><div class="board-column-header"><h3>${title}</h3><span class="board-count">${group.length}</span></div><div class="board-cards">${group.length ? group.map((task) => `<article class="task-card"><span class="task-card-company muted">${E(task.company.name || '企业信息待填写')}</span><h4>${route('task', task.title, task.id, '', 'task-card-title')}</h4><p>${E(status === 'review' ? '已有材料草稿，请核对待补段落与资料来源' : status === 'processing' ? '正在核对项目条件，继续查看下一步' : missingSummary(task))}</p>${progress(task)}<div class="task-card-footer"><span class="muted">${status === 'review' ? '待人工确认' : '政策顾问协助'}</span>${route(status === 'review' ? 'assembly' : 'task', '查看项目', task.id, '', 'text-button')}</div></article>`).join('') : '<p class="board-empty muted">暂无项目</p>'}</div></section>`;
-    }).join('')}</div></section>`;
-    const done = tasks.filter((task) => workflowState(task) === 'done');
-    const archive = done.length ? `<section class="archive-section"><div class="section-heading"><h2>已完成准备</h2></div>${done.map((task) => `<div class="archive-row"><div><h3>${E(task.title)}</h3><p class="muted">${E(task.company.name)}</p></div><span class="tag tag-success">材料已确认</span>${route('task', '查看项目', task.id, '', 'text-button')}</div>`).join('')}</section>` : '';
-    return header('申报工作台', '', route('new', '创建新任务', '', '', 'button button-primary')) + focus + services + board + archive;
+    const isDone = (task) => task.steps.review === true || task.status === 'done';
+    const needsMe = (task) => !isDone(task) && (window.PolicyWorkspace?.workItems?.(task).some(item => ['waiting','review'].includes(item.status)) ?? (!task.steps.profile || (task.steps.diagnosis && task.requirements.some((item) => item.status !== 'ready')) || (task.steps.assembly && !task.steps.review)));
+    const selected = ['active', 'mine', 'done'].includes(filter) ? filter : 'active';
+    const groups = { active: tasks.filter((task) => !isDone(task)), mine: tasks.filter(needsMe), done: tasks.filter(isDone) };
+    const responsible = (task) => {
+      if (isDone(task)) return { key: 'review', label: '材料已确认', expert: '企业负责人', status: '准备已完成', tone: 'tag-success', detail: '已确认的材料版本可以在材料库中查看。' };
+      const workItems = window.PolicyWorkspace?.workItems?.(task);
+      if (Array.isArray(workItems) && workItems.length) {
+        const open = workItems.filter((item) => item.status !== 'done').sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+        const item = open.find((entry) => ['waiting', 'review'].includes(entry.status)) || open[0];
+        if (item) return { key: item.id, label: item.title, expert: item.owner, status: item.label, tone: ['waiting', 'review'].includes(item.status) ? 'tag-warn' : 'tag-muted', detail: item.reason || '打开事项，查看当前结果与下一步。' };
+      }
+      if (!task.steps.profile) return { key: 'profile', label: '企业档案', expert: '企业资料助理', status: '等你补资料', tone: 'tag-warn', detail: '先确认企业基本情况和资料来源。' };
+      if (!task.steps.match) return { key: 'match', label: '政策匹配', expert: '政策匹配顾问', status: '待查找政策', tone: 'tag-muted', detail: '根据企业地区、行业和申报目标查找候选政策。' };
+      if (!task.steps.diagnosis) return { key: 'diagnosis', label: '差距诊断', expert: '申报诊断顾问', status: '待核对条件', tone: 'tag-muted', detail: '对照所选政策核对材料和适用条件。' };
+      const pending = task.requirements.filter((item) => item.status !== 'ready');
+      if (pending.length) return { key: 'diagnosis', label: '差距诊断', expert: '申报诊断顾问', status: pending.some((item) => item.status === 'missing' || (item.status === 'unknown' && item.kind === 'material')) ? '等你补资料' : '待你核对', tone: 'tag-warn', detail: missingSummary(task) };
+      if (!task.steps.assembly) return { key: 'assembly', label: '材料组稿', expert: '材料组稿专员', status: '待整理材料', tone: 'tag-muted', detail: '资料清单已具备，可以按模板整理申报草稿。' };
+      return { key: 'review', label: '人工确认', expert: '企业负责人', status: '待你核对', tone: 'tag-warn', detail: '核对材料内容与引用来源，确认准备使用的版本。' };
+    };
+    const tabs = `<div class="dashboard-toolbar"><div class="dashboard-tabs" role="group" aria-label="筛选申报项目">${[['active', '进行中'], ['mine', '待我处理'], ['done', '已完成']].map(([key, label]) => `<button type="button" class="dashboard-tab${key === selected ? ' is-active' : ''}" data-action="dashboard-filter" data-id="${key}" aria-pressed="${key === selected}">${label}<span>${groups[key].length}</span></button>`).join('')}</div>${route('new', '创建新任务', '', '', 'button button-primary')}</div>`;
+    const projects = groups[selected].map((task) => {
+      const work = responsible(task);
+      const taskButton = (label, className) => `<button type="button" class="${className}" data-route="task" data-task="${E(task.id)}" data-work="${E(work.key)}">${E(label)}${className.includes('text-button') ? I('arrow') : ''}</button>`;
+      return `<article class="dashboard-project-card"><div class="dashboard-project-heading"><span class="tag ${work.tone}">${E(work.status)}</span><span class="dashboard-project-step muted">${stats(task).completed}/5 项工作已完成</span></div><h2>${taskButton(task.title, 'dashboard-project-title')}</h2><p class="dashboard-project-company muted">${E(task.company.name || '企业档案待填写')}</p><div class="dashboard-current-work"><span class="dashboard-work-indicator" aria-hidden="true"></span><div><strong>${E(work.label)}</strong><span>${E(work.expert)}</span></div></div><p class="dashboard-project-next">${E(work.detail)}</p><div class="dashboard-project-footer">${progress(task)}${taskButton(isDone(task) ? '查看项目' : '继续处理', 'text-button')}</div></article>`;
+    }).join('');
+    const emptyText = selected === 'done' ? '还没有完成准备的项目' : selected === 'mine' ? '暂时没有需要你处理的事项' : '还没有进行中的项目';
+    const list = `<section class="dashboard-projects" aria-label="申报项目">${projects || `<div class="empty-state"><h2>${emptyText}</h2>${selected === 'active' ? route('new', '创建第一个项目', '', '', 'button button-primary') : '<p class="muted">可以切换到进行中，查看其他项目。</p>'}</div>`}</section>`;
+    const roles = [['企业资料助理', '整理企业画像与资料'], ['政策匹配顾问', '筛选合适的候选政策'], ['政策解读专家', '讲清条件和材料要求'], ['申报诊断顾问', '找出缺口和下一步'], ['材料组稿专员', '按模板整理已有资料'], ['办理指引顾问', '核对办理步骤与要求']];
+    const services = `<section class="dashboard-help" aria-labelledby="dashboard-help-title"><div class="section-heading"><h2 id="dashboard-help-title">需要哪方面帮助？</h2>${route('services', '全部专家', '', '', 'text-button')}</div><div class="dashboard-help-grid">${D().services.map((service, index) => `<button type="button" class="dashboard-expert-card" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}><span class="dashboard-expert-avatar" aria-hidden="true" style="--expert-x:${index % 3 * 50}%;--expert-y:${Math.floor(index / 3) * 100}%"></span><span class="dashboard-expert-copy"><strong>${E(roles[index]?.[0] || service.title)}</strong><small>${E(roles[index]?.[1] || service.output)}</small></span>${I('arrow')}</button>`).join('')}</div></section>`;
+    return `${header('申报工作台')}${tabs}${list}${services}`;
   }
 
   function newTask({ intent = '' } = {}) {

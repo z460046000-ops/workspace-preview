@@ -6,7 +6,7 @@
   const esc = (value = '') => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
-  const state = {region:'all', industry:'all', support:'all', status:'open', query:'', distribution:'industry', visible:6, carousel:0, expertTab:'experts', workStep:'profile'};
+  const state = {region:'all', industry:'all', support:'all', status:'open', query:'', distribution:'industry', visible:6, expertTab:'experts', workStep:'profile'};
   const statuses = {open:'申报中',upcoming:'即将开始',closed:'已截止',unknown:'时间待明确',notice:'政策公告',result:'结果公示'};
   let readerTrigger = null;
   const date = value => {
@@ -97,14 +97,7 @@
     if ($('#distribution-note')) $('#distribution-note').textContent = state.distribution === 'industry' ? '仅统计申报中项目；一个项目可对应多个行业，各项数量不相加。' : state.distribution === 'region' ? '省级口径；全国适用项目单列，不重复计入各省。' : '每项按主要支持类型统计，仅包含申报窗口开放的项目。';
   }
   function renderPolicies(items) {
-    const featured = items.filter(item => item.featured);
-    const slides = featured.length ? featured : items.slice(0,4);
-    state.carousel = slides.length ? ((state.carousel % slides.length)+slides.length)%slides.length : 0;
-    const policy = slides[state.carousel];
-    if ($('#policy-carousel')) $('#policy-carousel').innerHTML = policy ? `<article class="policy-feature"><div class="policy-feature-top"><span class="section-kicker">重点项目 / ${esc(policy.region === '全国' ? '全国适用' : policy.region)}</span>${statusTag(policy)}</div><h3><button type="button" data-policy-id="${esc(policy.id)}">${esc(policy.title)}</button></h3><p>${esc(policy.summary)}</p><div class="policy-feature-tags"><span>${esc(policy.supportType)}</span>${policy.industries.map(item => `<span>${esc(item)}</span>`).join('')}</div><dl class="policy-dates"><div><dt>发布日期</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(policy))}</dd></div></dl><button class="text-button" type="button" data-policy-id="${esc(policy.id)}">查看条件与材料 ${arrow}</button></article>` : '<div class="policy-feature policy-feature-empty"><h3>暂未找到符合条件的政策</h3><p>试试其他行业、地区，或清除当前筛选。</p></div>';
-    if ($('#policy-position')) $('#policy-position').textContent = slides.length ? `${state.carousel+1} / ${slides.length}` : '0 / 0';
-    for (const id of ['#policy-prev','#policy-next']) if ($(id)) $(id).disabled = slides.length < 2;
-    if ($('#policy-list')) $('#policy-list').innerHTML = items.slice(0,state.visible).map(item => `<article class="policy-row"><div class="policy-row-copy"><div class="policy-meta"><span>${esc(item.region === '全国' ? '全国适用' : item.region)}</span><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3><p class="policy-agency">${esc(item.agency)} · ${esc(item.category)}</p></div><dl class="policy-row-dates"><div><dt>发布</dt><dd>${esc(displayDate(item.publishedAt))}</dd></div><div><dt>申报</dt><dd>${esc(period(item))}</dd></div></dl><button class="policy-row-open" type="button" data-policy-id="${esc(item.id)}" aria-label="查看${esc(item.title)}">${arrow}</button></article>`).join('');
+    if ($('#policy-list')) $('#policy-list').innerHTML = items.slice(0,state.visible).map((item,index) => `<article class="policy-row${index < 3 ? ' policy-row-featured' : ''}"><div class="policy-row-copy"><div class="policy-meta"><span>${esc(item.region === '全国' ? '全国适用' : item.region)}</span><span>${esc(item.supportType)}</span>${statusTag(item)}</div><h3><button type="button" data-policy-id="${esc(item.id)}">${esc(item.title)}</button></h3>${index < 3 ? `<p class="policy-summary">${esc(item.summary)}</p>` : ''}<p class="policy-agency">${esc(item.agency)} · ${esc(item.category)}</p></div><dl class="policy-row-dates"><div><dt>发布时间</dt><dd>${esc(displayDate(item.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(item))}</dd></div></dl><button class="policy-row-open" type="button" data-policy-id="${esc(item.id)}" aria-label="查看${esc(item.title)}">${arrow}</button></article>`).join('');
     if ($('#policy-empty')) $('#policy-empty').hidden = items.length > 0;
     if ($('#policy-count')) $('#policy-count').textContent = `${items.length}项政策`;
     if ($('#show-more-policies')) { $('#show-more-policies').hidden = state.visible >= items.length; $('#show-more-policies').textContent = `再看${Math.min(6,Math.max(0,items.length-state.visible))}项`; }
@@ -114,14 +107,13 @@
     updateFilters();
     renderDistribution(items);
     renderPolicies(items);
-    if ($('#hero-query-status')) $('#hero-query-status').textContent = state.query ? `在演示政策中查找“${state.query}”：当前条件下找到${items.length}项。` : '';
+    if ($('#hero-query-status')) $('#hero-query-status').textContent = state.query ? `查找“${state.query}”：当前条件下找到${items.length}项。` : '';
     if ($('#policy-reader') && !$('#policy-reader').hidden) closeReader(false);
   }
   function changeFilter(key,value) {
     if (!['region','industry','support','status','query'].includes(key)) return;
     state[key] = value;
     state.visible = 6;
-    state.carousel = 0;
     render();
   }
   function openReader(id,trigger) {
@@ -129,7 +121,7 @@
     const reader = $('#policy-reader');
     if (!policy || !reader) return;
     readerTrigger = trigger;
-    reader.innerHTML = `<div class="policy-reader-head"><span class="section-kicker">政策详情 · 模拟数据</span><button id="policy-reader-close" class="text-button" type="button">收起详情 <span aria-hidden="true">×</span></button></div><div class="policy-meta"><span>${esc(policy.region === '全国' ? '全国适用' : policy.region)}</span><span>${esc(policy.category)}</span>${statusTag(policy)}</div><h3>${esc(policy.title)}</h3><p>${esc(policy.summary)}</p><dl class="policy-dates"><div><dt>发布部门</dt><dd>${esc(policy.agency)}</dd></div><div><dt>发布日期</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(policy))}</dd></div></dl><div class="policy-reader-columns"><section><h4>先核对这些条件</h4><ul>${policy.conditions.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section><section><h4>需要准备的材料</h4><ul>${policy.materials.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section></div><div class="policy-reader-foot"><p>来源：平台演示政策模板。此处不对应真实政策原文，条件与日期均用于体验。</p><a class="button button-primary" href="index.html#new">创建申报准备任务 ${arrow}</a></div>`;
+    reader.innerHTML = `<div class="policy-reader-head"><button id="policy-reader-close" class="text-button" type="button">收起详情 <span aria-hidden="true">×</span></button></div><div class="policy-meta"><span>${esc(policy.region === '全国' ? '全国适用' : policy.region)}</span><span>${esc(policy.category)}</span>${statusTag(policy)}</div><h3>${esc(policy.title)}</h3><p>${esc(policy.summary)}</p><dl class="policy-dates"><div><dt>发布部门</dt><dd>${esc(policy.agency)}</dd></div><div><dt>发布日期</dt><dd>${esc(displayDate(policy.publishedAt))}</dd></div><div><dt>申报时间</dt><dd>${esc(period(policy))}</dd></div></dl><div class="policy-reader-columns"><section><h4>先核对这些条件</h4><ul>${policy.conditions.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section><section><h4>需要准备的材料</h4><ul>${policy.materials.map(item => `<li>${esc(item)}</li>`).join('')}</ul></section></div><div class="policy-reader-foot"><p>来源：演示政策模板</p><a class="button button-primary" href="index.html#new">创建申报准备任务 ${arrow}</a></div>`;
     reader.hidden = false;
     reader.focus({preventScroll:true});
     reader.scrollIntoView?.({behavior:'instant',block:'nearest'});
@@ -145,11 +137,11 @@
     return `<div class="${className}" style="--portrait-x:${safe%3*50}%;--portrait-y:${Math.floor(safe/3)*100}%" aria-hidden="true"></div>`;
   }
   function expertLink(serviceId) {
-    const route = {profile:'profile',search:'policy',interpret:'policy',diagnosis:'diagnosis',assembly:'assembly',guidance:'guidance'}[serviceId] || 'task';
-    return `index.html#${route}?task=task-innovation`;
+    const work = {profile:'profile',search:'match',interpret:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review'}[serviceId];
+    return `index.html#task?task=task-innovation${work ? `&work=${work}` : ''}`;
   }
   function renderExperts() {
-    if ($('#expert-grid')) $('#expert-grid').innerHTML = D.experts.map((expert,index) => `<article class="expert-card expert-card-${index}"><div class="expert-copy"><h3>${esc(expert.title)}</h3><h4>${esc(expert.headline)}</h4><p>${esc(expert.description)}</p><div class="expert-tags">${expert.deliverables.map(item => `<span>${esc(item)}</span>`).join('')}</div><a class="expert-action" href="${esc(expertLink(expert.serviceId))}">让TA帮我 ${arrow}</a></div>${portrait(expert.portraitIndex)}</article>`).join('');
+    if ($('#expert-grid')) $('#expert-grid').innerHTML = D.experts.map((expert,index) => `<article class="expert-card expert-card-${index}"><div class="expert-copy"><h3>${esc(expert.title)}</h3><h4>${esc(expert.headline)}</h4><div class="expert-tags">${expert.deliverables.map(item => `<span>${esc(item)}</span>`).join('')}</div><a class="expert-action" href="${esc(expertLink(expert.serviceId))}">让TA帮我 ${arrow}</a></div>${portrait(expert.portraitIndex)}</article>`).join('');
     if ($('#team-grid')) $('#team-grid').innerHTML = D.teams.map((team,index) => `<article class="team-card team-card-${index}"><div class="team-copy"><h3>${esc(team.title)}</h3><p>${esc(team.headline)}</p><ol class="team-flow">${team.steps.map((step,stepIndex) => `<li><span>${String(stepIndex+1).padStart(2,'0')}</span>${esc(step)}</li>`).join('')}</ol><div class="expert-tags">${team.deliverables.map(item => `<span>${esc(item)}</span>`).join('')}</div><a class="expert-action" href="index.html#task?task=${index ? 'task-review' : 'task-innovation'}">开始协作 ${arrow}</a></div><div class="team-members" aria-hidden="true">${team.portraitIndices.map(item => portrait(item,'team-person')).join('')}</div></article>`).join('');
     selectExpertTab(state.expertTab);
   }
@@ -183,10 +175,10 @@
       if (focus && selected) button.focus();
     });
     if ($('#work-preview')) $('#work-preview').setAttribute('aria-labelledby',`step-${step}`);
-    if ($('#work-preview')) $('#work-preview').innerHTML = `<div class="work-chat"><div class="work-message message-user"><span>企业</span><p>${esc(data.user)}</p></div><div class="work-message message-adviser"><span>政策顾问</span><p>${esc(data.reply)}</p></div><a class="text-button" href="index.html#${data.link}?task=task-innovation">${esc(data.action)} ${arrow}</a></div><div class="work-result"><div class="work-result-title">${check}<h3>${esc(data.result)}</h3><span>演示</span></div><dl>${data.lines.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl><span class="work-result-caption">每一步都有可以核对的结果。</span></div>`;
+    if ($('#work-preview')) $('#work-preview').innerHTML = `<div class="work-chat"><div class="work-message message-user"><span>企业</span><p>${esc(data.user)}</p></div><div class="work-message message-adviser"><span>政策顾问</span><p>${esc(data.reply)}</p></div><a class="text-button" href="index.html#task?task=task-innovation&amp;work=${data.link}">${esc(data.action)} ${arrow}</a></div><div class="work-result"><div class="work-result-title">${check}<h3>${esc(data.result)}</h3></div><dl>${data.lines.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></div>`;
   }
   function renderCases() {
-    if ($('#case-grid')) $('#case-grid').innerHTML = D.cases.map((item,index) => `<article class="case-card case-card-${index}"><div class="case-meta"><span>${esc(item.region)} · ${esc(item.industry)}</span><span>案例演示</span></div><h3 class="case-company">${esc(item.company)}</h3><div class="case-support"><strong>${esc(item.amountLabel)}</strong><span>${esc(item.status)} · ${esc(item.supportLabel)}</span></div><p class="case-project">${esc(item.project)}</p><div class="case-story"><h4>平台协助完成</h4><ol>${item.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></div><a class="case-link" href="index.html#task?task=${esc(item.taskId)}">体验同类准备流程 ${arrow}</a></article>`).join('');
+    if ($('#case-grid')) $('#case-grid').innerHTML = D.cases.map((item,index) => `<article class="case-card case-card-${index}"><div class="case-meta"><span>${esc(item.region)} · ${esc(item.industry)}</span><span>模拟案例</span></div><h3 class="case-company">${esc(item.company)}</h3><div class="case-support"><strong>${esc(item.amountLabel)}</strong><span>${esc(item.status)} · ${esc(item.supportLabel)}</span></div><p class="case-project">${esc(item.project)}</p><div class="case-story"><h4>平台协助完成</h4><ol>${item.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></div><a class="case-link" href="index.html#task?task=${esc(item.taskId)}">查看同类准备流程 ${arrow}</a></article>`).join('');
   }
   function closeMenu() {
     $('#menu-toggle')?.setAttribute('aria-expanded','false');
@@ -231,11 +223,10 @@
         if (key === 'query' && $('#hero-query-form [name="query"]')) $('#hero-query-form [name="query"]').value = '';
       }
       if (target.id === 'clear-filters') {
-        Object.assign(state,{region:'all',industry:'all',support:'all',status:'open',query:'',visible:6,carousel:0});
+        Object.assign(state,{region:'all',industry:'all',support:'all',status:'open',query:'',visible:6});
         if ($('#hero-query-form [name="query"]')) $('#hero-query-form [name="query"]').value = '';
         render();
       }
-      if (target.id === 'policy-prev' || target.id === 'policy-next') { state.carousel += target.id === 'policy-prev' ? -1 : 1; renderPolicies(filterPolicies()); }
       if (target.id === 'show-more-policies') { state.visible += 6; renderPolicies(filterPolicies()); }
       if (target.dataset.policyId) openReader(target.dataset.policyId,target);
       if (target.id === 'policy-reader-close') closeReader();

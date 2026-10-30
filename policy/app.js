@@ -5,6 +5,7 @@
   const D = window.PolicyData;
   const V = window.PolicyViews;
   const M = window.PolicyMaterials;
+  const W = window.PolicyWorkspace;
   const page = document.querySelector('#page-content');
   const paths = {
     plus:'M12 5v14M5 12h14', grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
@@ -53,7 +54,8 @@
       link.classList.toggle('is-active',active);
       if (active) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
     });
-    document.querySelector('#recent-projects').innerHTML = state.tasks.slice(0,4).map(task => `<button class="recent-project" data-route="task" data-task="${escape(task.id)}" title="${escape(task.title)}">${escape(task.title)}</button>`).join('');
+    const projectRoute = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'].includes(route);
+    document.querySelector('#recent-projects').innerHTML = state.tasks.slice(0,8).map(task => `<button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button>`).join('');
     document.querySelector('#storage-status').textContent = state.storageError || state.loadWarning || '';
   }
   function renderSource(taskId, sourceId) {
@@ -64,20 +66,25 @@
   }
   function render() {
     const {route,params} = currentRoute();
-    const taskId = params.task || (['task','profile','diagnosis','assembly','guidance'].includes(route) ? params.id : '') || S.getState().activeTaskId;
+    const versionId = route === 'version' ? params.id : route === 'compare' ? params.left : '';
+    const versionTask = S.getState().versions.find(version => version.id === versionId)?.taskId;
+    const taskId = versionTask || params.task || (['task','profile','diagnosis','assembly','guidance'].includes(route) ? params.id : '') || S.getState().activeTaskId;
     if (taskId && S.getTask(taskId) && S.getState().activeTaskId !== taskId) S.setActiveTask(taskId);
+    const task = S.getTask(taskId);
+    const projectRoutes = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'];
+    const routeWork = {profile:'profile',policy:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review',version:'review',compare:'review'};
+    const workId = task ? W.selectedWork(task,routeWork[route] || params.work) : '';
+    if (task && projectRoutes.includes(route) && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
     const renderers = {
-      dashboard:() => V.dashboard(), new:() => V.newTask({intent:params.intent}), services:() => V.services({type:params.type,query:params.query}),
-      library:() => M.renderLibrary(), task:() => V.task(taskId), profile:() => V.profile(taskId), policy:() => V.policy(taskId,params.policy || params.id),
+      dashboard:() => V.dashboard({filter:params.filter}), new:() => V.newTask({intent:params.intent}), services:() => V.services({type:params.type,query:params.query}),
+      library:() => M.renderLibrary(), task:() => '', profile:() => V.profile(taskId), policy:() => V.policy(taskId,params.policy || params.id),
       diagnosis:() => V.diagnosis(taskId), assembly:() => M.renderAssembly(taskId), guidance:() => V.guidance(taskId),
       version:() => M.renderVersion(params.id), compare:() => M.renderCompare(params.left,params.right), source:() => renderSource(taskId,params.id),
     };
     try {
-      page.innerHTML = renderers[route]();
-      if(route === 'task' && S.getTask(taskId)) {
-        const panel=page.querySelector('.task-overview>.content-panel');
-        if(panel)panel.outerHTML=window.PolicyChat.render(taskId);
-      }
+      const content = renderers[route]();
+      page.innerHTML = projectRoutes.includes(route) ? W.render(taskId,{workId,content,route}) : content;
+      document.body.classList.toggle('in-project',projectRoutes.includes(route));
     }
     catch (error) {
       console.error('页面呈现失败',error);
@@ -108,9 +115,9 @@
   function useService(serviceId, taskId) {
     const task = S.getTask(taskId || S.getState().activeTaskId);
     if (!task) { navigate('new',{intent:serviceId}); return; }
-    const destinations = {profile:'profile',search:'policy',interpret:'policy',diagnosis:'diagnosis',assembly:'assembly',guidance:'guidance'};
+    const destinations = {profile:'profile',search:'match',interpret:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review'};
     if (!destinations[serviceId]) return;
-    navigate(destinations[serviceId],{task:task.id,...(serviceId === 'interpret' && task.steps.match ? {policy:task.policyId}:{})});
+    navigate('task',{task:task.id,work:destinations[serviceId]});
   }
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest('[data-action],[data-route]') : null;
@@ -120,6 +127,7 @@
     if (target.dataset.route) {
       const params = {};
       if (target.dataset.task) params.task = target.dataset.task;
+      if (target.dataset.work) params.work = target.dataset.work;
       if (target.dataset.id) {
         if (target.dataset.route === 'policy') params.policy = target.dataset.id;
         else params.id = target.dataset.id;
@@ -137,6 +145,11 @@
     else if (action === 'prompt-fill') {
       const input = page.querySelector('#task-request');
       if (input) { const addition = target.dataset.prompt || '';input.value = `${input.value.trim()}${input.value.trim() ? '\n':''}${addition}`.slice(0,5000);S.saveTaskDraft(input.value);input.focus(); }
+    } else if (action === 'dashboard-filter') navigate('dashboard',{filter:target.dataset.id});
+    else if (action === 'workspace-tab' && task) {
+      const work = W.selectedWork(task,target.dataset.work);
+      if (target.dataset.id === 'chat') navigate('task',{task:task.id,work});
+      else { const destination = W.contentDestination(task,work); navigate(destination.route,{task:task.id,work,id:destination.id}); }
     } else if (action === 'service-tab') navigate('services',{type:target.dataset.id});
     else if (action === 'service-use') useService(target.dataset.id,target.dataset.task);
     else if (action === 'team-use') navigate('new',{intent:target.dataset.id});
@@ -146,7 +159,7 @@
       render();toast('已载入虚构企业资料，可以继续检索政策。');
     } else if (action === 'run-match' && task) {
       if (!task.steps.profile || !task.company.region || !task.company.industry) {toast('请先确认企业名称、地区与行业。');navigate('profile',{task:task.id});return;}
-      S.updateTask(task.id,{steps:{match:true},status:'processing'});render();toast('已按地区筛选演示政策，具体条件请逐项核对。');
+      S.updateTask(task.id,{steps:{match:true},status:'processing'});navigate('policy',{task:task.id});toast('已按地区筛选演示政策，具体条件请逐项核对。');
     } else if (action === 'choose-policy' && task) {
       const policy = D.policies.find(item=>item.id === target.dataset.id);
       if (!policy || !task.steps.profile || !task.steps.match) {toast('请先确认档案并检索候选项目。');return;}
@@ -160,14 +173,14 @@
         return {...item,status:source?.provided && source.text.trim() ? 'ready':'missing',evidence:source?.provided && source.text.trim() ? '已提供资料，可继续核对正文与有效性。':'未提供对应证明材料，暂不能判断条件是否满足。'};
       });
       S.updateTask(task.id,{requirements,steps:{diagnosis:true},status:requirements.some(item=>item.status !== 'ready') ? 'needs-input':'processing'});
-      render();toast('已核对材料清单。');
+      navigate('diagnosis',{task:task.id});toast('已核对材料清单。');
     } else if (action === 'mark-ready' && task) {
       const requirement = task.requirements.find(item=>item.id === target.dataset.id);
       if (!requirement || requirement.kind !== 'material' || !requirement.sourceId) return;
       const text = sampleTexts[requirement.sourceId] || D.createTaskSeed({loadDemo:true}).sources.find(item=>item.id === requirement.sourceId)?.text;
       if (!text) {navigate('source',{task:task.id,id:requirement.sourceId});return;}
       updateSource(task,requirement.sourceId,text);render();toast('已补充虚构示例资料，材料组稿前请核对来源。');
-    } else if (action === 'view-source' && task) navigate('source',{task:task.id,id:target.dataset.id});
+    } else if (action === 'view-source' && task) navigate('source',{task:task.id,id:target.dataset.id,work:target.dataset.work || task.selectedWorkId});
   });
   document.addEventListener('input', event => {
     if (event.target?.id === 'task-request') S.saveTaskDraft(event.target.value);
@@ -191,7 +204,7 @@
       const title = request.replace(/[\n\r]+/g,' ').slice(0,36);
       const task = S.createTask({title,request,company:{name,region,industry}});
       if (!task) {formError(form,'任务没有创建成功，请检查填写内容。');return;}
-      S.saveTaskDraft('');navigate('profile',{task:task.id});toast('任务已建立，请确认企业档案与资料。');
+      S.saveTaskDraft('');navigate('task',{task:task.id,work:'profile'});toast('任务已建立，请确认企业档案与资料。');
     } else if (form.id === 'profile-form') {
       const task=S.getTask(form.dataset.task);
       if (!task || !value('name') || !value('region') || !value('industry')) {formError(form,'请填写企业名称、地区和行业。');return;}
