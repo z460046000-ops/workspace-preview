@@ -20,9 +20,9 @@
     { id: 'application-preparation', title: '申报材料准备团', headline: '把资料整理成一份可核对的申报草稿', serviceIds: ['profile', 'search', 'interpret', 'diagnosis', 'assembly', 'guidance'], portraitIndices: [2, 4, 1], steps: ['解读材料要求', '补齐企业资料', '按模板组稿', '人工确认版本'], deliverables: ['材料草稿', '章节来源', '历史版本'] },
   ];
   const cases = [
-    {id:'software-research',title:'软件企业研发申报',industry:'软件信息',direction:'研发与创新',outcome:'研发资料有据可查',description:'把项目记录、成果证明与费用资料，整理到同一份申报任务。',steps:['查找研发类候选政策','补齐费用归集与财务资料','按模板组稿，保留引用来源'],taskId:'task-innovation'},
-    {id:'manufacturing-upgrade',title:'制造企业数字化改造',industry:'先进制造',direction:'数字化转型',outcome:'项目投入逐项归集',description:'从应用场景、实施过程到投入凭证，把改造项目说清楚。',steps:['梳理改造项目与应用场景','核对实施记录和投入凭证','保存材料版本，比较修改内容'],taskId:'task-digital'},
-    {id:'business-qualification',title:'科技企业资质培育',industry:'科技服务',direction:'企业成长',outcome:'申报条件逐项核对',description:'对照培育要求，归集企业资质与成果证明，找到下一步。',steps:['解读培育条件与申报要求','整理企业与技术成果证明','逐项核对正文、附件和办理步骤'],taskId:'task-review'},
+    {id:'grant-qiutian',company:'重庆秋田齿轮有限责任公司',displayName:'重庆秋田齿轮',industry:'智能制造',region:'重庆',amount:'500',unit:'万元',supportLabel:'市级工业和信息化专项资金补助',project:'数字化车间建设',yearLabel:'2025年报道',awardYear:null,sourcePublishedAt:'2025-03-14',description:'建设数字化车间，获得市级工信专项资金支持。',sourceUrl:'https://czj.cq.gov.cn/zwxx_268/czdt/cjsd/202503/t20250317_14413736.html'},
+    {id:'grant-hithium',company:'重庆海辰储能科技有限公司',displayName:'重庆海辰储能',industry:'新能源',region:'重庆',amount:'300',unit:'万元',supportLabel:'智能工厂建设资金支持',project:'智能工厂建设',yearLabel:'2025年报道',awardYear:null,sourcePublishedAt:'2025-03-14',description:'推进智能工厂建设，获得专项资金支持。',sourceUrl:'https://czj.cq.gov.cn/zwxx_268/czdt/cjsd/202503/t20250317_14413736.html'},
+    {id:'grant-novasky',company:'湖南华诺星空电子技术有限公司',displayName:'华诺星空',industry:'电子信息',region:'长沙',amount:'50',unit:'万元',supportLabel:'市级研发补助',project:'企业研发投入',yearLabel:'2020年研发补助',awardYear:2020,sourcePublishedAt:'2021-10-27',description:'获得市级研发补助，支持企业研发投入。',sourceUrl:'https://gxt.hunan.gov.cn/xxgk_71033/gzdt/dfgz/202110/t20211027_20885053.html'},
   ];
   const deepFreeze = (value) => {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
