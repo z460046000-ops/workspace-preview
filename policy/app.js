@@ -11,6 +11,7 @@
   const formDrafts = new Map();
   const documentPositions = new Map();
   const indexPositions = new Map();
+  let confirmationFocus = null;
   let companyStartDraft = '';
   const expertCompanyDrafts = new Map();
   const serviceWork = {profile:'profile',search:'match',interpret:'interpret',diagnosis:'diagnosis',assembly:'assembly',guidance:'guidance'};
@@ -37,6 +38,22 @@
   function discardFormDraft(form) {
     const key=draftKey(form);
     if(key){formDrafts.delete(key);form.dataset.draftSaved='true';}
+  }
+  function getPendingDraft(taskId) {
+    const task=S.getTask(taskId);
+    if(!task)return null;
+    for(const [key,values] of formDrafts){
+      if(!key.startsWith(`${taskId}:`))continue;
+      const [,formId,sourceId]=key.split(':');
+      const original=formId==='profile-form' ? task.company : {text:task.sources.find(source=>source.id===sourceId)?.text || ''};
+      const dirty=Object.entries(values).some(([name,value])=>String(value)!==String(original[name] ?? ''));
+      if(!dirty)continue;
+      return formId==='profile-form'
+        ? {reason:'企业资料有未保存的修改，请先保存后再确认。',route:'profile',params:{task:taskId}}
+        : {reason:'原始资料有未保存的修改，请先保存后再确认。',route:'source',params:{task:taskId,id:sourceId}};
+    }
+    if(M.hasUnsavedDraft?.(taskId))return {reason:'申报材料有未保存的修改，请先保存新版本。',route:'assembly',params:{task:taskId}};
+    return null;
   }
   function forgetProject(taskId) {
     for (const map of [formDrafts,documentPositions]) {
@@ -202,8 +219,12 @@
     }
     cards?.addEventListener('scroll',syncExpertControls,{passive:true});
     syncExpertControls();
+    if(confirmationFocus?.taskId===taskId && confirmationFocus.workId===workId){
+      page.querySelector(`#expert-tab-${workId}`)?.focus({preventScroll:true});
+      confirmationFocus=null;
+    }
   }
-  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render,getCompanyDraft:service=>service ? expertCompanyDrafts.get(service) || '' : companyStartDraft});
+  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render,getPendingDraft,getCompanyDraft:service=>service ? expertCompanyDrafts.get(service) || '' : companyStartDraft});
   document.querySelectorAll('[data-icon]').forEach(element => {element.innerHTML = icon(element.dataset.icon);});
   S.subscribe(sidebar);
   window.addEventListener('hashchange',render);
@@ -289,6 +310,19 @@
       const input = page.querySelector('#task-request');
       if (input) { const addition = target.dataset.prompt || '';input.value = `${input.value.trim()}${input.value.trim() ? '\n':''}${addition}`.slice(0,5000);S.saveTaskDraft(input.value);input.focus(); }
     } else if (action === 'dashboard-filter') navigate('dashboard',{filter:target.dataset.id});
+    else if(action==='confirm-work'){
+      const workspace=page.querySelector('.project-workspace');
+      const currentWork=page.querySelector('.adviser-card')?.dataset.chatWork;
+      if(!task || workspace?.dataset.task!==target.dataset.task || currentWork!==target.dataset.work){toast('当前工作已切换，请确认正在查看的事项。');return;}
+      captureFormDraft();
+      const pending=getPendingDraft(task.id);
+      if(pending){toast(pending.reason);render();return;}
+      const result=S.confirmWork(task.id,target.dataset.work,target.dataset.confirmationKey || '',target.dataset.versionId || '');
+      if(!result.ok){toast(result.reasons[0] || '当前事项尚未满足确认条件。');render();return;}
+      const next=result.nextWork || target.dataset.work;
+      confirmationFocus={taskId:task.id,workId:next};
+      navigate('task',{task:task.id,work:next});
+    }
     else if (action === 'workspace-expert' && task) {
       const current=currentRoute();
       navigate(current.route,{...current.params,task:task.id,work:target.dataset.work,...(current.route==='expert'?{service:serviceForWork(target.dataset.work)}:{})});
@@ -305,7 +339,7 @@
       render();toast('已载入虚构企业资料，可以继续检索政策。');
     } else if (action === 'run-match' && task) {
       if (!task.steps.profile || !task.company.region || !task.company.industry) {toast('请先确认企业名称、地区与行业。');navigate('profile',{task:task.id});return;}
-      S.updateTask(task.id,{steps:{match:true},status:'processing'});navigate('policy',{task:task.id});toast('已按地区筛选演示政策，具体条件请逐项核对。');
+      S.updateTask(task.id,{steps:{match:true},status:'processing'});navigate('policy',{task:task.id});toast('已按企业档案筛选候选政策，请逐项核对适用条件。');
     } else if (action === 'choose-policy' && task) {
       const policy = D.policies.find(item=>item.id === target.dataset.id);
       if (!policy || !task.steps.profile || !task.steps.match) {toast('请先确认档案并检索候选项目。');return;}

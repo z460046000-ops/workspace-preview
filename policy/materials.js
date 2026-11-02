@@ -73,6 +73,17 @@
     return { id: source.id, name: source.name || '未命名资料', text: String(source.text || ''), type: source.type || '', provided: sourceProvided(source) };
   }
 
+  function hasUnsavedDraft(taskId) {
+    const task = taskById(taskId);
+    const draft = drafts.get(taskId);
+    if (!task || !draft || draft.policyId !== task.policyId) return false;
+    if (draft.note.trim()) return true;
+    const baseline = draft.baseVersionId && versionById(draft.baseVersionId);
+    if (!baseline) return draft.sections.some(section => String(section.body || '').trim());
+    const comparable = sections => sections.map(section => ({ id: section.id, title: section.title, body: section.body || '', sourceIds: section.sourceIds || [], sourceQuotes: (section.sourceQuotes || []).map(quoteSnapshot) }));
+    return JSON.stringify(comparable(draft.sections)) !== JSON.stringify(comparable(sectionList(baseline)));
+  }
+
   function sourceDetails(quotes, className = '') {
     if (!quotes.length) return '<p class="mat-source-empty">暂无可引用资料，相关内容需补充后核对。</p>';
     return `<div class="mat-sources ${className}">${quotes.map((source) => `<details class="mat-source"><summary>${E(source.name || '未命名资料')}</summary><div class="mat-source-text">${E(source.text || '该资料尚未录入正文。')}</div></details>`).join('')}</div>`;
@@ -166,6 +177,7 @@
   }
 
   function confirmationBlockers(version, task) {
+    if (typeof store()?.getVersionBlockers === 'function') return store().getVersionBlockers(version.id);
     const result = missingRequirements(task).map((requirement) => requirement.label || requirement.title || '必备资料待补');
     if (version.policyId !== task?.policyId) result.unshift('申报项目已变更，请重新组稿并保存新版本');
     const sources = asArray(task?.sources);
@@ -270,6 +282,8 @@
       const version = versionById(versionId);
       const task = version && taskById(version.taskId);
       if (!version || !task) { ui().toast('没有找到对应版本或任务。'); return true; }
+      const pending = ui().getPendingDraft?.(task.id);
+      if (pending) { ui().toast(pending.reason); return true; }
       if (isConfirmed(version)) { ui().toast('这个版本已经确认。'); return true; }
       const blockers = confirmationBlockers(version, task);
       if (blockers.length) { ui().toast(`暂时不能确认：${blockers[0]}${blockers.length > 1 ? `等 ${blockers.length} 项待处理` : ''}。`); return true; }
@@ -321,5 +335,5 @@
     } else if (input.hasAttribute('data-mat-note')) draft.note = input.value;
   });
 
-  window.PolicyMaterials = Object.freeze({ renderAssembly, renderLibrary, renderVersion, renderCompare, handleClick, handleSubmit, forgetTask:taskId=>drafts.delete(taskId) });
+  window.PolicyMaterials = Object.freeze({ renderAssembly, renderLibrary, renderVersion, renderCompare, handleClick, handleSubmit, hasUnsavedDraft, forgetTask:taskId=>drafts.delete(taskId) });
 })();

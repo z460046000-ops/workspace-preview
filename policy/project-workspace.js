@@ -15,14 +15,15 @@
   const capabilityDefinitions = [['profile','企业档案'],['match','政策匹配'],['interpret','条件解读'],['diagnosis','差距诊断'],['assembly','材料组稿'],['guidance','办理指引']];
   const validWork = value => definitions.some(([id]) => id === value) || ['interpret','guidance'].includes(value);
   const versionsFor = task => S().getState().versions.filter(v => v.taskId === task.id).sort((a,b) => b.number-a.number);
+  const versionIsCurrent = (task, version) => Boolean(version && version.policyId === task.policyId && version.companyName === task.company.name && version.sections.every(section => section.sourceQuotes.every(quote => {
+    const source=task.sources.find(item=>item.id===quote.id);
+    return source && source.provided===quote.provided && source.text===quote.text && source.name===quote.name && source.type===quote.type;
+  })));
 
   function workItems(task) {
     const gaps = task.requirements.filter(item => item.status !== 'ready');
     const latest = versionsFor(task)[0];
-    const stale = latest && (latest.policyId !== task.policyId || latest.companyName !== task.company.name || latest.sections.some(section => section.sourceQuotes.some(quote => {
-      const current = task.sources.find(source => source.id === quote.id);
-      return !current?.provided || current.text !== quote.text || current.name !== quote.name;
-    })));
+    const stale = latest && !versionIsCurrent(task,latest);
     const pending = latest && (!latest.sections.length || latest.sections.some(section => !section.body.trim() || /[【\[]待(?:补(?:充)?|核对)[】\]]/.test(section.body)));
     const states = {
       profile: task.steps.profile ? ['done','已确认','企业信息与资料来源已确认。'] : ['waiting','待你核对','确认企业地区、行业和资料来源。'],
@@ -80,22 +81,30 @@
   }
   function renderContext(task, item, {content='',route='task',capabilities=false}={}) {
     const E=U().escape,I=U().icon;
-    const versions=versionsFor(task);
+    const versions=versionsFor(task),latest=versions[0];
+    const currentMaterial=versionIsCurrent(task,latest) ? latest : null;
     const policy=window.PolicyData.policies.find(p=>p.id === task.policyId);
     const ready=task.requirements.filter(r=>r.status === 'ready').length;
     const count=definitions.filter(([id])=>task.steps[id]).length;
-    const persona=window.PolicyPersonas.get(item.id);
     const isDocumentOpen=!['task','expert'].includes(route);
-    const routeButton=(route,label,id='') => `<button class="text-button" data-route="${route}" data-task="${E(task.id)}" data-work="${item.id}"${capabilities?' data-experts="1"':''}${id ? ` data-id="${E(id)}"` : ''}>${E(label)} ${I('arrow')}</button>`;
-    let result='';
-    if (item.id === 'profile') result=`<p>${task.steps.profile ? '企业档案已确认' : '企业档案待你确认'}</p>${routeButton('profile','查看企业档案')}`;
-    else if (item.id === 'match') result=`<p>${task.steps.match ? E(policy?.title || '候选政策已就绪') : '尚未查找候选政策'}</p>${routeButton('policy','查看候选政策')}`;
-    else if (item.id === 'interpret') result=task.steps.match ? `<p>${E(policy?.title || '')}</p><ul>${(policy?.conditions || []).map(condition=>`<li>${E(condition)}</li>`).join('')}</ul>${routeButton('policy','查看条件与材料')}` : `<p>先明确候选政策，再逐条解读适用对象、条件和材料要求。</p>${routeButton('policy','查看候选政策')}`;
-    else if (item.id === 'guidance') result=`<p>核对申报批次、截止时间、签章及材料版本。</p>${routeButton('guidance','查看办理清单')}${versions[0]?routeButton('version',`查看 V${versions[0].number}`,versions[0].id):''}`;
-    else if (item.id === 'diagnosis') result=task.steps.diagnosis ? `<p>已具备 ${ready}/${task.requirements.length} 项</p><ul>${task.requirements.filter(r=>r.status !== 'ready').map(r=>`<li>${E(r.label)}</li>`).join('') || '<li>清单已具备，待核对正文。</li>'}</ul>${routeButton('diagnosis','查看差距清单')}` : `<p>对照政策核对后，将在这里显示缺口。</p>${routeButton('diagnosis','核对申报差距')}`;
-    else if (item.id === 'assembly') result=`<p>${versions.length ? `已保存 ${versions.length} 个版本` : '尚未保存材料版本'}</p>${routeButton('assembly','打开组稿编辑器')}`;
-    else result=versions[0] ? `<p>V${versions[0].number} · ${versions[0].status === 'confirmed' ? '已确认' : '待核对'}</p>${routeButton('version','核对正文与来源',versions[0].id)}${routeButton('guidance','查看办理指引')}` : `<p>保存材料首版后，在这里核对。</p>${routeButton('assembly','整理材料')}`;
+    const routeButton=(destination,label,id='') => `<button type="button" class="text-button" data-route="${destination}" data-task="${E(task.id)}" data-work="${item.id}"${capabilities?' data-experts="1"':''}${id ? ` data-id="${E(id)}"` : ''}>${E(label)} ${I('arrow')}</button>`;
+    const outputWork={interpret:'match',review:'assembly',guidance:'guidance'}[item.id] || item.id;
+    const outputs=[
+      {work:'profile',title:'企业档案',route:'profile',ready:task.steps.profile,detail:task.steps.profile ? [task.company.region,task.company.industry].filter(Boolean).join(' · ') : '确认企业信息后生成'},
+      {work:'match',title:'候选政策清单',route:'policy',ready:task.steps.match,detail:task.steps.match ? policy?.title || '查看适用条件与匹配依据' : '查找适用政策后生成'},
+      {work:'diagnosis',title:'申报差距清单',route:'diagnosis',ready:task.steps.diagnosis,detail:task.steps.diagnosis ? `${ready}/${task.requirements.length} 项资料已具备` : '核对政策条件后生成'},
+      {work:'assembly',title:'申报材料',route:'assembly',ready:!!currentMaterial,detail:currentMaterial ? `V${currentMaterial.number} · ${currentMaterial.status==='confirmed'?'已确认':'待核对'}` : latest ? '资料或政策已更新，请重新组稿' : '保存首版材料后生成'},
+      {work:'guidance',title:'办理指引',route:'guidance',ready:task.steps.match,detail:task.steps.match ? '办理步骤与提交前检查' : '明确申报政策后查看'},
+    ];
     const sourceList=[...task.sources].sort((a,b)=>Number(a.provided)-Number(b.provided));
+    const sourceHTML=sourceList.map(source=>`<button type="button" data-action="view-source" data-provided="${source.provided}" data-task="${E(task.id)}" data-id="${E(source.id)}" data-work="${item.id}">${I('file')}<span>${E(source.name)}<small>${source.provided?'已提供':'待补充'}</small></span>${I('arrow')}</button>`).join('');
+    const outputHTML=outputs.map(output=>`<button type="button" class="workspace-output-item${output.work===outputWork?' is-current':''}" data-output-work="${output.work}" data-route="${output.route}" data-task="${E(task.id)}" data-work="${item.id}"${capabilities?' data-experts="1"':''}${output.ready?'':' disabled'}${output.work===outputWork?' aria-current="true"':''}>${I('file')}<span><strong>${E(output.title)}</strong><small>${E(output.detail)}</small></span><span class="output-state${output.ready?' is-ready':''}">${output.ready?'查看':'待生成'}</span></button>`).join('');
+    const versionHTML=versions.map(version=>{
+      const date=new Date(version.createdAt);
+      const label=Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+      return `<button type="button" class="workspace-version-item" data-route="version" data-id="${E(version.id)}" data-task="${E(task.id)}" data-work="${item.id}"${capabilities?' data-experts="1"':''}><span class="workspace-version-mark">V${version.number}</span><span class="workspace-version-copy"><strong>${E(version.note || '申报材料')}</strong><time datetime="${E(version.createdAt)}">${E(label)}</time></span><span class="version-state${version.status==='confirmed'?' is-confirmed':''}">${version.status==='confirmed'?'已确认':'待核对'}</span></button>`;
+    }).join('');
+    const compareLink=versions.length>1?`<a class="workspace-compare-link" href="#compare?left=${encodeURIComponent(versions[1].id)}&amp;right=${encodeURIComponent(versions[0].id)}&amp;work=${item.id}${capabilities?'&amp;experts=1':''}">比较最近两个版本 ${I('arrow')}</a>`:'';
     let documentHTML='';
     if (isDocumentOpen) {
       const template=document.createElement('template');
@@ -103,11 +112,11 @@
       const title=template.content.querySelector('h1,h2')?.textContent?.trim() || item.title;
       documentHTML=`<section class="workspace-document" aria-label="${E(title)}"><header class="workspace-document-toolbar"><button class="text-button" data-route="${capabilities?'expert':'task'}" data-task="${E(task.id)}" data-work="${item.id}"${capabilities?' data-experts="1"':''}>${I('arrow')} 返回项目资料</button><h2>${E(title)}</h2></header><div class="workspace-content" tabindex="0">${documentContent(content)}</div></section>`;
     }
-    return `<aside class="workspace-context" tabindex="0" aria-label="项目资料与成果">
+    return `<aside class="workspace-context" tabindex="0" aria-label="企业简介、输出内容与历史版本">
       <div class="workspace-context-index"${isDocumentOpen ? ' hidden' : ''}>
-        <section class="context-card workspace-summary"><h2>项目摘要</h2><p class="context-company">${E(task.company.name || '企业档案待填写')}</p><dl><div><dt>地区</dt><dd>${E(task.company.region || '待填写')}</dd></div><div><dt>申报政策</dt><dd>${task.steps.match ? E(policy?.title || '待选择') : '待匹配'}</dd></div><div><dt>资料准备</dt><dd>${task.requirements.length ? `${ready}/${task.requirements.length} 项已具备` : '尚未建立准备清单'}</dd></div></dl><section class="project-progress" aria-label="整体项目进度"><div><span>整体项目进度</span><strong>${Math.round(count/5*100)}<small>%</small></strong></div><progress value="${count}" max="5" aria-label="${count}/5 项工作已完成"></progress><small>${count}/5 项工作已完成</small></section></section>
-        <section class="context-card workspace-result" data-result-work="${item.id}"><header class="workspace-result-heading"><span class="context-expert-avatar" aria-hidden="true" style="--expert-x:${persona.x}%;--expert-y:${persona.y}%"></span><div><h2>${E(persona.name)}</h2><p>${E(item.title)} · ${E(item.label)}</p></div></header><div class="workspace-result-body">${result}</div></section>
-        <section class="context-card workspace-source-list"><header class="context-card-heading"><h2>项目资料</h2><span>${task.sources.filter(source=>source.provided).length}/${task.sources.length} 已提供</span></header>${sourceList.length ? sourceList.map(source=>`<button data-action="view-source" data-provided="${source.provided}" data-task="${E(task.id)}" data-id="${E(source.id)}" data-work="${item.id}">${I('file')}<span>${E(source.name)}<small>${source.provided ? '已提供' : '待补充'}</small></span>${I('arrow')}</button>`).join('') : '<p class="muted">尚未提供资料</p>'}<div class="workspace-related-links">${routeButton('profile','企业档案')}${routeButton('policy','候选政策')}${routeButton('assembly','申报草稿')}</div><section class="workspace-version-list"><h3>材料版本</h3>${versions.length ? versions.map(version=>routeButton('version',`V${version.number} · ${version.status === 'confirmed' ? '已确认' : '待核对'}`,version.id)).join('') : '<p class="muted">尚未保存</p>'}</section></section>
+        <section class="context-card workspace-summary"><header class="context-card-heading"><h2>企业简介</h2><span class="company-profile-status">${task.steps.profile?'已核对':'待核对'}</span></header><p class="context-company">${E(task.company.name || '企业名称待填写')}</p><p class="context-company-description">${E(task.company.industry || '补充企业行业，便于查找适用政策。')}</p><dl><div><dt>所在地区</dt><dd>${E(task.company.region || '待填写')}</dd></div><div><dt>申报政策</dt><dd>${task.steps.match ? E(policy?.title || '待选择') : '待匹配'}</dd></div><div><dt>资料准备</dt><dd>${ready}/${task.requirements.length} 项已具备</dd></div></dl><section class="project-progress" aria-label="整体项目进度"><div><span>申报进度</span><strong>${Math.round(count/5*100)}<small>%</small></strong></div><progress value="${count}" max="5" aria-label="${count}/5 项工作已完成"></progress><small>${count}/5 项工作已完成</small></section><details class="workspace-company-materials"><summary><span>企业资料</span><span>${task.sources.filter(source=>source.provided).length}/${task.sources.length} 已提供 ${I('arrow')}</span></summary><div class="workspace-source-list">${sourceHTML || '<p class="muted">尚未提供资料</p>'}</div>${routeButton('profile','查看完整企业档案')}</details></section>
+        <section class="context-card workspace-result" data-result-work="${item.id}"><header class="context-card-heading"><h2>输出内容</h2><span>${outputs.filter(output=>output.ready).length}/${outputs.length}</span></header><div class="workspace-output-list">${outputHTML}</div></section>
+        <section class="context-card workspace-version-list"><header class="context-card-heading"><h2>历史版本</h2><span>${versions.length} 个版本</span></header>${versionHTML || '<div class="workspace-version-empty">'+I('file')+'<p>保存材料后，版本会记录在这里。</p></div>'}${compareLink}</section>
       </div>${documentHTML}
     </aside>`;
   }

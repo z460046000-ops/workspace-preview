@@ -112,6 +112,56 @@
     return actionFor(task, next);
   }
 
+  function confirmationMarkup(task, workId) {
+    const E=U().escape,I=U().icon,expert=experts[workId],policy=policyFor(task),latest=versionsFor(task)[0];
+    const model=S().getWorkConfirmation(task.id,workId);
+    const pending=U().getPendingDraft?.(task.id);
+    const reasons=[...(pending?[pending.reason]:[]),...model.reasons];
+    const labels={ready:'已具备',missing:'待补资料',unmet:'条件不满足',unknown:'待核实'};
+    const provided=task.sources.filter(source=>source.provided && source.text.trim());
+    const counts=Object.fromEntries(Object.keys(labels).map(status=>[status,task.requirements.filter(item=>item.status===status).length]));
+    const facts=[];let title='',description='',confirmLabel='';let actions=[];let gaps=[];
+    if(workId==='profile'){
+      title='请核对企业资料';description='确认企业信息后，继续核对适用政策。';confirmLabel='确认企业资料，继续匹配';
+      facts.push(['企业名称',task.company.name||'待填写'],['注册地区',task.company.region||'待填写'],['所属行业',task.company.industry||'待填写'],['已提供资料',`${provided.length} 份`]);
+      actions.push({route:'profile',label:'查看企业资料'});
+    }else if(workId==='match'){
+      title='确认本次申报项目';description='请核对政策方向和适用条件，确定本次要准备的项目。';confirmLabel='确认这个项目，继续诊断';
+      facts.push(['拟申报政策',policy?.title||'尚未选择'],['政策地区',policy?.region||'待核对']);
+      if(task.steps.match)gaps=Array.isArray(policy?.matchedReasons)?policy.matchedReasons:[];
+      actions.push(!task.steps.profile?{route:'profile',label:'先完善企业资料'}:!task.steps.match?{action:'run-match',label:'执行政策匹配'}:{route:'policy',id:task.policyId,label:'查看或调整政策'});
+    }else if(workId==='diagnosis'){
+      title=task.steps.diagnosis?'请核对申报差距':'先核对申报差距';description='确认表示已了解当前缺口；需要补充的材料会继续保留。';confirmLabel='已了解差距，继续组稿';
+      facts.push(['已具备',`${counts.ready} 项`],['待补资料',`${counts.missing} 项`],['待核实',`${counts.unknown} 项`],['条件不满足',`${counts.unmet} 项`]);
+      gaps=task.requirements.filter(item=>item.status!=='ready').map(item=>`${item.label} · ${labels[item.status]}`);
+      actions.push(!task.steps.profile?{route:'profile',label:'先完善企业资料'}:!task.steps.match?{route:'policy',label:'先确认候选政策'}:!task.steps.diagnosis?{action:'run-diagnosis',label:'执行差距核对'}:{route:'diagnosis',label:'查看并补充缺口'});
+    }else{
+      const sources=new Set((latest?.sections||[]).flatMap(section=>section.sourceIds));
+      const pendingSections=(latest?.sections||[]).filter(section=>!section.body.trim()||/[【\[]待(?:补(?:充)?|核对)[】\]]/.test(section.body));
+      facts.push(['材料版本',latest?`V${latest.number}`:'尚未保存'],['正文章节',`${latest?.sections.length||0} 章`],['引用资料',`${sources.size} 份`]);
+      if(workId==='assembly'){
+        title='请确认用于核对的草稿';description=pendingSections.length?`这份草稿有 ${pendingSections.length} 章仍待完善，进入核对后可以继续处理。`:'请查看已保存的正文和来源，再将这一版交给下一环节核对。';confirmLabel=latest?`确认使用 V${latest.number}，继续核对`:'确认草稿，继续核对';
+        actions.push({route:'assembly',label:latest?'继续修改草稿':'打开组稿编辑器'});
+      }else{
+        title=model.confirmed?'材料版本已确认':'请核对材料后确认';description=model.confirmed?`V${latest.number} 已确认，可以继续查看办理清单。`:'请核对企业事实、正文、附件及引用来源，再确认这个版本。';confirmLabel=latest?`确认 V${latest.number} 材料无误`:'确认材料无误';
+        if(!latest)actions.push({route:'assembly',label:'先保存材料草稿'});
+        else if(model.confirmed)actions.push({route:'guidance',work:'guidance',label:'查看办理指引'});
+        else if(reasons.length)actions.push({route:'diagnosis',label:'查看待处理事项'},{route:'assembly',label:'修改并保存新版本'});
+      }
+      if(latest)actions.unshift({route:'version',id:latest.id,label:`查看 V${latest.number} 正文`});
+    }
+    if(pending)actions.unshift({route:pending.route,id:pending.params.id,label:pending.route==='assembly'?'保存当前草稿':pending.route==='source'?'保存当前资料':'保存企业修改'});
+    const attrs=action=>`${action.route?`data-route="${action.route}"`:`data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${E(action.work||workId)}"${action.id?` data-id="${E(action.id)}"`:''}`;
+    const uniqueActions=actions.filter((action,index,list)=>list.findIndex(other=>other.route===action.route&&other.action===action.action&&other.id===action.id)===index);
+    return `<div class="chat-message-row is-assistant chat-confirmation-row" data-confirmation-work="${workId}"><span class="chat-message-avatar chat-message-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-message-body"><span class="chat-message-name">${E(expert.name)}</span><div class="chat-message chat-assistant chat-confirmation-bubble" role="group" aria-label="${E(title)}"><h3>${E(title)}</h3><p class="chat-confirmation-summary">${E(description)}</p><dl class="chat-confirmation-facts">${facts.map(([label,value])=>`<div><dt>${E(label)}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>${gaps.length?`<ul class="chat-confirmation-details">${gaps.map(text=>`<li>${E(text)}</li>`).join('')}</ul>`:''}${reasons.length?`<ul class="chat-confirmation-blockers" aria-label="需要先处理的事项">${[...new Set(reasons)].map(reason=>`<li>${E(reason)}</li>`).join('')}</ul>`:''}<div class="chat-confirmation-actions">${uniqueActions.map(action=>`<button type="button" class="text-button" ${attrs(action)}>${E(action.label)} ${I('arrow')}</button>`).join('')}${!model.confirmed?`<button type="button" class="button button-primary" data-action="confirm-work" data-task="${E(task.id)}" data-work="${workId}" data-confirmation-key="${model.fingerprint}"${['assembly','review'].includes(workId)&&model.versionId?` data-version-id="${E(model.versionId)}"`:''}${reasons.length?' aria-disabled="true"':''}>${E(confirmLabel)}</button>`:''}</div></div></div></div>`;
+  }
+
+  function consultationMarkup(task, workId, action) {
+    const E=U().escape,expert=experts[workId];
+    const attrs=`${action.route?`data-route="${action.route}"`:`data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${workId}"${action.id?` data-id="${E(action.id)}"`:''}`;
+    return `<div class="chat-message-row is-assistant"><span class="chat-message-avatar chat-message-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-message-body"><span class="chat-message-name">${E(expert.name)}</span><div class="chat-message chat-assistant chat-confirmation-bubble"><p>${E(action.detail)}</p><div class="chat-confirmation-actions"><button type="button" class="text-button" ${attrs}>${E(action.label)} ${U().icon('arrow')}</button></div></div></div></div>`;
+  }
+
   function render(taskId, requestedWork = 'general', options = {}) {
     const task = S().getTask(taskId);
     if (!task) return '';
@@ -130,11 +180,10 @@
       return `<div class="chat-message-row ${isUser ? 'is-user' : 'is-assistant'}">${avatar}<div class="chat-message-body"><span class="chat-message-name">${isUser ? '企业负责人' : E(author.name)}</span><p class="chat-message chat-${message.role}${context ? ' chat-context' : ''}">${E(message.text)}</p></div></div>`;
     };
     const statusLabel = options?.statusLabel ? `<span class="chat-expert-status">${E(options.statusLabel)}</span>` : '';
-    const attrs = `${action.route ? `data-route="${action.route}"` : `data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${workId}"${action.id ? ` data-id="${E(action.id)}"` : ''}`;
+    const currentTaskBubble=['profile','match','diagnosis','assembly','review'].includes(workId)?confirmationMarkup(task,workId):consultationMarkup(task,workId,action);
     return `<section class="adviser-card" data-chat-task="${E(task.id)}" data-chat-work="${workId}" aria-label="${E(expert.name)}对话">
       <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-header-identity"><h2>${E(expert.name)}</h2><div class="chat-expert-meta"><span class="muted chat-expert-subject">${E(expert.subject)}</span>${statusLabel}</div></div></header>
-      <div class="chat-scroll-region" tabindex="0" aria-label="对话记录"><div class="chat-messages" aria-live="polite">${messageHtml({ role: 'assistant', text: answer(task, '', workId), workId }, true)}${messages.map(message => messageHtml(message)).join('')}</div>
-        <div class="chat-work-action"><div><strong>${E(action.label)}</strong><p class="muted">${E(action.detail)}</p></div><button class="button button-primary" ${attrs}>${E(action.label)} ${I('arrow')}</button></div>
+      <div class="chat-scroll-region" tabindex="0" aria-label="对话记录"><div class="chat-messages" aria-live="polite">${messageHtml({ role: 'assistant', text: answer(task, '', workId), workId }, true)}${messages.map(message => messageHtml(message)).join('')}${currentTaskBubble}</div>
         ${history.length ? `<details class="chat-project-history"><summary>项目历史对话 <span>${history.length} 条</span></summary><div class="chat-messages">${history.map(message => messageHtml(message)).join('')}</div></details>` : ''}
       </div>
       <div class="chat-composer"><div class="chat-suggestions">${expert.prompts.map(prompt => `<button data-action="chat-prompt" data-task="${E(task.id)}" data-work="${workId}" data-prompt="${E(prompt)}">${E(prompt.replace(/[？?]$/, ''))}</button>`).join('')}</div>

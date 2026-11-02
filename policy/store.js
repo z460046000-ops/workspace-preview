@@ -221,21 +221,95 @@
     return version;
   }
 
+  function getVersionBlockers(versionId) {
+    const version = state.versions.find((item) => item.id === versionId);
+    if (!version) return ['尚未保存可核对的材料版本'];
+    const task = getTask(version.taskId);
+    if (!task) return ['没有找到材料所属项目'];
+    const reasons = [];
+    if (!task.steps.profile) reasons.push('请先确认企业档案');
+    if (!task.steps.match) reasons.push('请先执行政策匹配并选择申报项目');
+    if (!task.steps.diagnosis) reasons.push('请先核对申报差距');
+    if (version.policyId !== task.policyId) reasons.push('申报项目已变更，请重新组稿并保存新版本');
+    if (version.companyName !== task.company.name) reasons.push('企业信息已更新，请重新组稿并保存新版本');
+    if (!task.requirements.length) reasons.push('尚未建立材料核对清单');
+    task.requirements.filter(requirement => requirement.status !== 'ready').forEach(requirement => reasons.push(`${requirement.label}尚未补齐或核实`));
+    if (!version.sections.length) reasons.push('尚无可确认的材料正文');
+    version.sections.forEach(section => {
+      if (!section.body.trim() || /[【\[]待(?:补(?:充)?|核对)[】\]]/.test(section.body)) reasons.push(`${section.title}尚待补充或核对`);
+    });
+    if (version.sections.some(section => section.sourceQuotes.some(quote => {
+      const current = task.sources.find(source => source.id === quote.id);
+      return !current || !current.provided || current.provided !== quote.provided || current.text !== quote.text || current.name !== quote.name || current.type !== quote.type;
+    }))) reasons.push('资料已更新，请重新组稿并保存新版本');
+    return [...new Set(reasons)];
+  }
+
   function confirmVersion(versionId) {
     const version = state.versions.find((item) => item.id === versionId);
     if (!version) return false;
     if (version.status === 'confirmed') return true;
-    const task = getTask(version.taskId);
-    if (!task || !task.requirements.length || task.requirements.some((requirement) => requirement.status !== 'ready')) return false;
-    if (!task.steps.profile || !task.steps.match || !task.steps.diagnosis || version.policyId !== task.policyId || version.companyName !== task.company.name) return false;
-    if (!version.sections.length || version.sections.some((section) => !section.body.trim() || /[【\[]待(?:补(?:充)?|核对)[】\]]/.test(section.body))) return false;
-    if (version.sections.some(section => section.sourceQuotes.some(quote => {
-      const current = task.sources.find(source => source.id === quote.id);
-      return !current || !current.provided || current.text !== quote.text || current.name !== quote.name;
-    }))) return false;
+    if (getVersionBlockers(versionId).length) return false;
     state.versions = state.versions.map((item) => item.id === versionId ? freezeVersion({ ...clone(item), status: 'confirmed' }) : item);
     publish();
     return true;
+  }
+
+  function confirmationFingerprint(task, version) {
+    const value = JSON.stringify([task.company, task.policyId, task.steps, task.requirements, task.sources, version?.id || '', version?.status || '']);
+    let hash = 2166136261;
+    for (let index = 0; index < value.length; index++) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+    return (hash >>> 0).toString(16);
+  }
+
+  function getWorkConfirmation(taskId, workId) {
+    const task = getTask(taskId);
+    const nextWork = { profile: 'match', match: 'diagnosis', diagnosis: 'assembly', assembly: 'review', review: null }[workId];
+    if (!task || !stepNames.includes(workId)) return { ready: false, reasons: ['没有找到可确认的工作事项'], nextWork: null, versionId: '', fingerprint: '' };
+    const version = state.versions.filter(item => item.taskId === taskId).sort((a, b) => b.number - a.number)[0];
+    const policy = DATA.policies.find(item => item.id === task.policyId);
+    const reasons = [];
+    const profileMissing = [['name', '企业名称'], ['region', '地区'], ['industry', '行业']].filter(([key]) => !String(task.company[key] || '').trim());
+    if (workId === 'profile') {
+      profileMissing.forEach(([, label]) => reasons.push(`请补充${label}`));
+      const employees = task.company.employees;
+      if (employees !== '' && employees !== null && employees !== undefined && (!Number.isSafeInteger(Number(employees)) || Number(employees) < 0)) reasons.push('员工人数需填写非负整数');
+    } else {
+      if (!task.steps.profile || profileMissing.length) reasons.push('请先补齐并确认企业档案');
+      if (!policy) reasons.push('请先选择拟申报政策');
+      if (!task.steps.match) reasons.push('请先执行政策匹配并选择申报项目');
+      if (['diagnosis', 'assembly', 'review'].includes(workId) && !task.steps.diagnosis) reasons.push('请先核对申报差距');
+      if (workId === 'diagnosis' && !task.requirements.length) reasons.push('尚未建立材料核对清单');
+      if (['assembly', 'review'].includes(workId)) {
+        if (!policy?.template) reasons.push('尚未提供申报模板，当前只能整理材料清单');
+        if (!version) reasons.push('请先按资料组稿并保存一个材料版本');
+        else if (workId === 'review') reasons.push(...getVersionBlockers(version.id));
+        else {
+          if (version.policyId !== task.policyId || version.companyName !== task.company.name) reasons.push('企业或申报项目已变更，请重新组稿并保存新版本');
+          if (!version.sections.length || version.sections.some(section => !section.body.trim())) reasons.push('请补充材料章节后保存新版本');
+          if (version.sections.some(section => section.sourceQuotes.some(quote => {
+            const current = task.sources.find(source => source.id === quote.id);
+            return !current || !current.provided || current.provided !== quote.provided || current.name !== quote.name || current.text !== quote.text || current.type !== quote.type;
+          }))) reasons.push('资料已更新，请重新组稿并保存新版本');
+        }
+      }
+    }
+    return { ready: reasons.length === 0, reasons: [...new Set(reasons)], nextWork, versionId: version?.id || '', fingerprint: confirmationFingerprint(task, version), confirmed: workId === 'review' && version?.status === 'confirmed' && task.steps.review };
+  }
+
+  function confirmWork(taskId, workId, expectedFingerprint = '', expectedVersionId = '') {
+    const task = getTask(taskId);
+    const result = getWorkConfirmation(taskId, workId);
+    if (!task) return { ok: false, ...result };
+    if (expectedFingerprint && expectedFingerprint !== result.fingerprint || expectedVersionId && expectedVersionId !== result.versionId) return { ...result, ok: false, reasons: ['当前结果已更新，请重新核对后确认'] };
+    if (!result.ready) return { ...result, ok: false };
+    if (workId === 'review') {
+      if (!confirmVersion(result.versionId)) return { ...result, ok: false, reasons: getVersionBlockers(result.versionId) };
+      if (!task.steps.review || task.status !== 'done') updateTask(taskId, { status: 'done', steps: { review: true } });
+    } else if (!task.steps[workId]) {
+      updateTask(taskId, { steps: { [workId]: true }, status: workId === 'assembly' ? 'review' : 'processing' });
+    }
+    return { ...getWorkConfirmation(taskId, workId), ok: true };
   }
 
   window.PolicyStore = Object.freeze({
@@ -247,7 +321,7 @@
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
-    createTask, deleteTask, updateTask, saveVersion, confirmVersion,
+    createTask, deleteTask, updateTask, saveVersion, confirmVersion, getVersionBlockers, getWorkConfirmation, confirmWork,
     saveTaskDraft(value) {
       if (typeof value !== 'string') return false;
       state.draft = text(value);
