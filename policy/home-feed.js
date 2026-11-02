@@ -11,7 +11,15 @@
       return '';
     }
   };
-  const dateLabel = value => String(value || '').replace(/-/g, '.');
+  const rotationInterval = 5000;
+  const validPublishedDate = value => {
+    const match = typeof value === 'string' && value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return false;
+    const [year, month, day] = match.slice(1).map(Number);
+    if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+  };
   const arrow = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg>';
   const previous = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5-5 5 5 5"/></svg>';
   const next = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg>';
@@ -19,12 +27,14 @@
   const play = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 7 5-7 5Z"/></svg>';
   const state = { index: 0, paused: false, hovered: false, focused: false, root: null, timer: null, media: null, cleanups: [] };
   const policies = () => (Array.isArray(window.PolicyPublicPolicies) ? [...window.PolicyPublicPolicies] : [])
-    .filter(item => item && item.title && /^\d{4}-\d{2}-\d{2}$/.test(item.publishedAt || '') && safeUrl(item.sourceUrl))
+    .filter(item => item && item.title && validPublishedDate(item.publishedAt) && safeUrl(item.sourceUrl))
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || String(a.id).localeCompare(String(b.id)));
   const current = items => items[state.index % items.length];
 
   function policyMarkup(item) {
-    return `<a class="home-policy-link" href="${esc(safeUrl(item.sourceUrl))}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}（查看政策原文）">${esc(item.title)}</a><time class="home-policy-date" datetime="${esc(item.publishedAt)}">发布 ${esc(dateLabel(item.publishedAt))}</time>`;
+    const [year, month, day] = item.publishedAt.split('-');
+    const publishedLabel = `${year}年${Number(month)}月${Number(day)}日发布`;
+    return `<div class="home-policy-item"><time class="home-policy-date" datetime="${esc(item.publishedAt)}" title="${esc(publishedLabel)}" aria-label="${esc(publishedLabel)}"><span class="home-policy-date-month">${Number(month)}月</span><strong class="home-policy-date-day">${day}</strong></time><div class="home-policy-copy"><span class="home-policy-published">发布日期<span class="home-policy-year"> · ${year}年</span></span><a class="home-policy-link" href="${esc(safeUrl(item.sourceUrl))}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}（查看政策原文）">${esc(item.title)}</a></div></div>`;
   }
 
   function renderTicker() {
@@ -57,7 +67,7 @@
       state.timer = null;
       if (!canRotate()) return;
       move(1, false);
-    }, 6500);
+    }, rotationInterval);
   }
 
   function move(direction, announce = true) {
@@ -66,8 +76,10 @@
     state.index = (state.index + direction + items.length) % items.length;
     const content = state.root.querySelector('[data-home-feed-content]');
     if (content) {
+      const restoreLinkFocus = content.contains(document.activeElement);
       content.setAttribute('aria-live', announce ? 'polite' : 'off');
       content.innerHTML = policyMarkup(current(items));
+      if (restoreLinkFocus) content.querySelector('.home-policy-link')?.focus({ preventScroll: true });
     }
     const count = state.root.querySelector('[data-home-feed-count]');
     if (count) count.textContent = `${state.index + 1}/${items.length}`;
@@ -103,6 +115,16 @@
       state.focused = !!event.relatedTarget && root.contains(event.relatedTarget);
       schedule();
     });
+    listen(root, 'keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing || !event.target?.closest?.('.home-policy-controls')) return;
+      const items = policies();
+      if (items.length < 2) return;
+      const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1
+        : event.key === 'Home' ? -state.index : event.key === 'End' ? items.length - 1 - state.index : null;
+      if (direction === null) return;
+      event.preventDefault();
+      move(direction);
+    });
     listen(document, 'visibilitychange', schedule);
     if (state.media?.addEventListener) listen(state.media, 'change', schedule);
     else if (state.media?.addListener) {
@@ -127,5 +149,5 @@
     return true;
   }
 
-  window.PolicyHomeFeed = Object.freeze({ renderTicker, renderCases, mount, unmount, handleClick });
+  window.PolicyHomeFeed = Object.freeze({ renderTicker, renderCases, mount, unmount, handleClick, rotationInterval });
 })();

@@ -22,7 +22,7 @@
   const getPolicy = (id) => D().policies.find((item) => item.id === id);
   const activeTask = () => S().getTask(S().getState().activeTaskId) || S().getState().tasks[0] || null;
   const header = (title, description = '', buttons = '') => `<header class="page-header"><div><h1>${E(title)}</h1>${description ? `<p class="muted">${E(description)}</p>` : ''}</div>${buttons ? `<div class="page-actions">${buttons}</div>` : ''}</header>`;
-  const notFound = () => `${header('没有找到这个项目')}<div class="empty-state"><p class="muted">返回工作台选择一个项目继续。</p>${route('dashboard', '返回工作台')}</div>`;
+  const notFound = () => `${header('没有找到这个项目')}<div class="empty-state"><p class="muted">返回首页选择一个项目继续。</p>${route('dashboard', '返回首页')}</div>`;
   const missingSummary = (task) => {
     const missing = task.requirements.filter((item) => item.status === 'missing');
     const unknown = task.requirements.filter((item) => item.status === 'unknown');
@@ -40,22 +40,22 @@
   const field = (label, name, value = '', options = {}) => `<label class="form-field" for="field-${E(name)}"><span>${E(label)}${options.required ? '<span aria-hidden="true"> *</span>' : ''}</span><input id="field-${E(name)}" name="${E(name)}" type="${E(options.type || 'text')}" maxlength="${options.max || 200}" value="${E(value)}"${options.required ? ' required' : ''}${options.placeholder ? ` placeholder="${E(options.placeholder)}"` : ''}${options.type === 'number' ? ' min="0" step="1"' : ''}></label>`;
 
   const startExperts = [
-    ['profile','企业资料','理清企业情况'],
-    ['search','政策匹配','找到适用政策'],
-    ['interpret','条件解读','讲清申报要求'],
-    ['diagnosis','差距诊断','找出缺口与建议'],
-    ['assembly','材料组稿','整理资料与版本'],
-    ['guidance','办理指引','核对提交与办理'],
+    ['profile','企业资料','理清企业情况','理清我的企业情况'],
+    ['search','政策匹配','找到适用政策','找到适合我的政策'],
+    ['interpret','条件解读','讲清申报要求','看懂申报条件'],
+    ['diagnosis','差距诊断','找出缺口与建议','知道还缺什么'],
+    ['assembly','材料组稿','整理资料与版本','整理申报材料'],
+    ['guidance','办理指引','核对提交与办理','弄清怎么办理'],
   ];
   function companyStartForm(service = '') {
-    return `<form id="company-start-form" class="company-start-form"${service ? ` data-service="${E(service)}"` : ''}><label for="start-company-name">只需告诉我企业名称</label><input id="start-company-name" name="companyName" type="text" maxlength="300" required autocomplete="organization" placeholder="请输入企业全称" value="${E(window.PolicyUI.getCompanyDraft(service))}"><button type="submit" class="button button-primary">立即申报 ${I('arrow')}</button></form>`;
+    return `<form id="company-start-form" class="company-start-form"${service ? ` data-service="${E(service)}"` : ''}><label for="start-company-name">只需告诉我企业名称</label>${service ? '' : '<p class="company-start-helper" id="company-start-helper">找到适用政策，再把条件和材料逐项准备清楚。</p>'}<input id="start-company-name" name="companyName" type="text" maxlength="300" required autocomplete="organization" placeholder="请输入企业全称"${service ? '' : ' aria-describedby="company-start-helper"'} value="${E(window.PolicyUI.getCompanyDraft(service))}"><button type="submit" class="button button-primary">立即申报 ${I('arrow')}</button></form>`;
   }
   function dashboard() {
-    const cards = startExperts.map(([key,stage,result],index) => {
+    const cards = startExperts.map(([key,stage,result,goal],index) => {
       const person=persona(key);
-      return `<li class="start-expert-card" data-service="${key}"><div class="start-expert-step"><span class="start-expert-number">${String(index+1).padStart(2,'0')}</span><span>${stage}</span>${index<startExperts.length-1?I('arrow'):''}</div><button type="button" class="start-expert-body" data-action="home-expert" data-service="${key}" aria-label="${E(result)}，与${E(person.name)}对话"><span class="start-expert-portrait" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div class="start-expert-copy"><h2>${result}</h2><span class="start-expert-name">${E(person.name)}</span><span class="start-expert-entry">与TA聊聊 ${I('arrow')}</span></div></button></li>`;
+      return `<li class="start-expert-card" data-service="${key}"><div class="start-expert-step"><span class="start-expert-number">${String(index+1).padStart(2,'0')}</span><span>${stage}</span>${index<startExperts.length-1?I('arrow'):''}</div><button type="button" class="start-expert-body" data-action="home-expert" data-service="${key}" aria-label="${E(goal)}，与${E(person.name)}对话"><span class="start-expert-portrait" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"><span class="start-expert-photo"></span></span><div class="start-expert-copy"><h2>${E(goal)}</h2><span class="start-expert-name">${E(person.name)}</span><span class="start-expert-entry">去聊聊 ${I('arrow')}</span></div></button></li>`;
     }).join('');
-    return `<div class="company-start-page">${header('惠企政策')}${window.PolicyHomeFeed?.renderTicker() || ''}<section class="start-experts" aria-label="专家按申报准备顺序排列，可左右滚动" tabindex="0"><ol class="start-expert-row">${cards}</ol></section>${companyStartForm()}${window.PolicyHomeFeed?.renderCases() || ''}</div>`;
+    return `<div class="company-start-page">${header('惠企政策','从找政策到准备申报，每一步都有专家帮你。')}${window.PolicyHomeFeed?.renderTicker() || ''}<section class="home-start" aria-label="开始企业政策申报">${companyStartForm()}</section><section class="home-experts" aria-labelledby="home-experts-heading"><div class="home-experts-heading"><div><h2 id="home-experts-heading">申报中的这些事，都有人帮你</h2><p>从了解企业到办理申报，也可以直接选择你需要的帮助。</p></div><span>6 项专业支持</span></div><div class="start-experts" aria-label="专家按申报准备顺序排列，可左右滚动" tabindex="0"><ol class="start-expert-row">${cards}</ol></div></section>${window.PolicyHomeFeed?.renderCases() || ''}</div>`;
   }
   function expertEntry(service) {
     const selected=startExperts.find(([key])=>key===service) || startExperts[0];
@@ -87,7 +87,7 @@
     const count = stats(current);
     const selectedPolicy = getPolicy(current.policyId);
     const versions = S().getState().versions.filter((version) => version.taskId === current.id);
-    return `${header(current.title, current.company.name || '企业信息待填写', route('dashboard', '返回工作台'))}<ol class="task-stepper" aria-label="任务步骤">${steps.map(([key, label, destination], index) => `<li class="${current.steps[key] ? 'is-complete' : ''}"><button type="button" data-route="${destination}" data-task="${E(current.id)}"><span class="step-number">${current.steps[key] ? I('check') : index + 1}</span><span>${label}</span><small>${current.steps[key] ? '已完成' : '待处理'}</small></button></li>`).join('')}</ol><div class="task-overview"><section class="content-panel"><h2>下一步</h2><p class="next-action-text">${E(missingSummary(current))}</p>${progress(current)}${route(nextRoute(current), '继续处理', current.id, '', 'button button-primary')}</section><section class="content-panel"><h2>项目概要</h2><dl class="summary-list"><div><dt>企业地区</dt><dd>${E(current.company.region || '待填写')}</dd></div><div><dt>准备情况</dt><dd>已具备 ${count.ready}/${count.total} 项</dd></div><div><dt>申报项目</dt><dd>${current.steps.match ? E(selectedPolicy?.title || '待选择') : '待检索与选择'}</dd></div><div><dt>材料版本</dt><dd>${versions.length ? `${versions.length} 个版本` : '尚未保存'}</dd></div></dl></section></div><section class="task-results"><div class="section-heading"><h2>项目资料与结果</h2></div><div class="result-links">${[['profile', '企业档案', '核对基本信息与资料来源'], ['policy', '政策条件', '查看适用范围与材料要求'], ['diagnosis', '差距诊断', '区分资料缺失与待核实条件'], ['assembly', '材料组稿', '按模板整理并保存版本'], ['guidance', '办理指引', '检查后续办理步骤']].map(([destination, title, description]) => `<button type="button" class="result-link" data-route="${destination}" data-task="${E(current.id)}"><span>${title}</span><small>${description}</small>${I('arrow')}</button>`).join('')}</div></section>`;
+    return `${header(current.title, current.company.name || '企业信息待填写', route('dashboard', '返回首页'))}<ol class="task-stepper" aria-label="任务步骤">${steps.map(([key, label, destination], index) => `<li class="${current.steps[key] ? 'is-complete' : ''}"><button type="button" data-route="${destination}" data-task="${E(current.id)}"><span class="step-number">${current.steps[key] ? I('check') : index + 1}</span><span>${label}</span><small>${current.steps[key] ? '已完成' : '待处理'}</small></button></li>`).join('')}</ol><div class="task-overview"><section class="content-panel"><h2>下一步</h2><p class="next-action-text">${E(missingSummary(current))}</p>${progress(current)}${route(nextRoute(current), '继续处理', current.id, '', 'button button-primary')}</section><section class="content-panel"><h2>项目概要</h2><dl class="summary-list"><div><dt>企业地区</dt><dd>${E(current.company.region || '待填写')}</dd></div><div><dt>准备情况</dt><dd>已具备 ${count.ready}/${count.total} 项</dd></div><div><dt>申报项目</dt><dd>${current.steps.match ? E(selectedPolicy?.title || '待选择') : '待检索与选择'}</dd></div><div><dt>材料版本</dt><dd>${versions.length ? `${versions.length} 个版本` : '尚未保存'}</dd></div></dl></section></div><section class="task-results"><div class="section-heading"><h2>项目资料与结果</h2></div><div class="result-links">${[['profile', '企业档案', '核对基本信息与资料来源'], ['policy', '政策条件', '查看适用范围与材料要求'], ['diagnosis', '差距诊断', '区分资料缺失与待核实条件'], ['assembly', '材料组稿', '按模板整理并保存版本'], ['guidance', '办理指引', '检查后续办理步骤']].map(([destination, title, description]) => `<button type="button" class="result-link" data-route="${destination}" data-task="${E(current.id)}"><span>${title}</span><small>${description}</small>${I('arrow')}</button>`).join('')}</div></section>`;
   }
 
   function profile(taskId) {
