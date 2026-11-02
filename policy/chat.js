@@ -211,7 +211,23 @@
     const input = panel.querySelector('#adviser-message');
     if (input && drafts.has(key)) input.value = drafts.get(key);
     if (region) {
-      region.scrollTop = followLatest || !scrollPositions.has(key) ? region.scrollHeight : scrollPositions.get(key);
+      const hasPosition = scrollPositions.has(key);
+      let top = followLatest || !hasPosition ? region.scrollHeight : scrollPositions.get(key);
+      if (region.clientHeight > 0 && (followLatest || !hasPosition)) {
+        const regionBounds = region.getBoundingClientRect();
+        if (followLatest) {
+          const reply = [...region.querySelectorAll(':scope > .chat-messages > .chat-message-row.is-assistant')]
+            .filter(row => row.querySelector('p.chat-assistant:not(.chat-context)')).at(-1);
+          const replyBounds = reply?.getBoundingClientRect();
+          if (replyBounds?.height > 0) top = region.scrollTop + replyBounds.bottom - regionBounds.top - region.clientHeight + 10;
+        } else {
+          const confirmation = region.querySelector(':scope > .chat-messages > .chat-confirmation-row');
+          const confirmationBounds = confirmation?.getBoundingClientRect();
+          if (confirmationBounds?.height > region.clientHeight) top = region.scrollTop + confirmationBounds.top - regionBounds.top - 10;
+        }
+        top = Math.max(0, Math.min(top, region.scrollHeight - region.clientHeight));
+      }
+      region.scrollTop = top;
       scrollPositions.set(key, region.scrollTop);
     }
     return true;

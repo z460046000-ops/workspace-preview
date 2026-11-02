@@ -214,11 +214,12 @@
 .in-project .workspace-company-materials[open]>summary .icon{transform:rotate(90deg)}
 .in-project .workspace-company-materials .text-button{font-size:11px;min-height:36px}
 .in-project .workspace-output-list{display:grid;gap:5px}
-.in-project .workspace-output-item{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:10px 9px;border-radius:8px;text-align:left;color:#5b7495}
+.in-project .workspace-output-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 9px;border-radius:8px;text-align:left;color:#5b7495}
 .in-project .workspace-output-item>.icon{width:18px;height:18px;flex:none}
 .in-project .workspace-output-item>span:nth-child(2){display:block;min-width:0;flex:1}
 .in-project .workspace-output-item strong{display:block;color:#42516a;font-size:12px;font-weight:500;line-height:1.7}
 .in-project .workspace-output-item small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#8a96a6;font-size:10px;line-height:1.7;margin-top:2px;overflow-wrap:anywhere}
+.in-project .workspace-output-item:not(.is-current) small{display:none}
 .in-project .workspace-output-item .output-state{font-size:10px;flex:none;color:#939eac}
 .in-project .workspace-output-item .output-state.is-ready{color:#637fa4}
 .in-project .workspace-output-item.is-current{background:#edf3fe}
@@ -455,3 +456,8 @@
 
 @media(hover:none){.in-project .chat-confirmation-actions .button,.in-project .chat-confirmation-actions .text-button{min-height:44px}.in-project .workspace-company-materials>summary{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.in-project .workspace-company-materials>summary .icon{transition:none}}
+
+/* 简介保留必要企业信息，输出采用文件行，历史版本更容易被发现。 */
+.in-project .workspace-summary .context-company-description{margin-bottom:10px}
+.in-project .workspace-summary .project-progress{padding-top:12px;margin-top:12px;row-gap:6px}
+.in-project .workspace-summary .workspace-company-materials{margin-top:12px}
