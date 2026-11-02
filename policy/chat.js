@@ -8,8 +8,10 @@
   const experts = {
     profile: { ...window.PolicyPersonas.get('profile'), subject: '企业档案', icon: 'building', prompts: ['企业档案还缺什么？', '哪些资料已经提供？'], placeholder: '补充企业情况，或问问档案还缺什么……' },
     match: { ...window.PolicyPersonas.get('match'), subject: '政策匹配', icon: 'search', prompts: ['为什么匹配这个政策？', '申报条件是什么？'], placeholder: '问问匹配原因、政策条件或适用范围……' },
+    interpret: { ...window.PolicyPersonas.get('interpret'), subject: '条件解读', icon: 'book', prompts: ['申报条件怎么看？', '需要准备哪些材料？'], placeholder: '问问政策条款、适用范围或材料要求……' },
     diagnosis: { ...window.PolicyPersonas.get('diagnosis'), subject: '差距诊断', icon: 'check', prompts: ['还差哪些材料？', '应该先补什么？'], placeholder: '问问当前缺口，或需要补充哪些证明……' },
     assembly: { ...window.PolicyPersonas.get('assembly'), subject: '材料组稿', icon: 'file', prompts: ['现在可以开始组稿吗？', '材料正文依据什么？'], placeholder: '说明组稿要求，或问问章节和资料来源……' },
+    guidance: { ...window.PolicyPersonas.get('guidance'), subject: '办理指引', icon: 'route', prompts: ['提交前需要核对什么？', '去哪里办理申报？'], placeholder: '问问办理步骤、签章或提交前的检查……' },
     review: { ...window.PolicyPersonas.get('review'), subject: '人工确认', icon: 'book', prompts: ['这个版本还要核对什么？', '有哪些历史版本？'], placeholder: '问问当前版本、引用来源或待核对内容……' },
     general: { ...window.PolicyPersonas.get('general'), subject: '项目沟通', icon: 'book', prompts: ['当前项目进展如何？', '接下来先处理什么？'], placeholder: '问问项目进度、资料缺口或材料版本……' },
   };
@@ -36,6 +38,14 @@
     const versions = versionsFor(task);
     const latest = versions[0];
     const gaps = incomplete(task);
+    if (workId === 'interpret') {
+      if (!task.steps.match) return '我会把政策拆成三部分：适用对象、必须满足的条件、需要提供的证明。先明确候选政策，再逐条说明要求；当前还没有确认适用于这家企业的政策。';
+      return `${policy.title}\n申报条件：\n${policy.conditions.map((condition,index)=>`${index+1}. ${condition}`).join('\n')}\n准备材料：${policy.materials.join('、')}。\n材料与企业实际情况需要逐项对应，信息不足的地方保留待核实。`;
+    }
+    if (workId === 'guidance') {
+      if (/已提交|已经提交|通过了吗|获批/.test(message)) return '当前没有官方平台的提交回执或审批结果，不能据此判断已经提交或获批。可以先核对材料版本与办理渠道。';
+      return `办理前先核对四件事：\n1. 确认政策原文、申报批次与截止时间。\n2. 按清单整理正文及附件，核对签字、盖章和文件格式。\n3. 由企业负责人确认准备提交的版本。\n4. 按政策指定的官方渠道办理并保存回执。\n${latest ? `本项目最新材料为 V${latest.number}，${latest.status==='confirmed'?'已由你确认':'仍待核对'}。` : '本项目尚未保存材料版本，可以先准备资料。'}本平台不会代为提交政府申报。`;
+    }
     if (/成功|概率|几率|获批/.test(message)) return '当前展示的预估成功率为 78%（模拟值），尚未接入预测模型。资料准备度和获批概率是两回事，补齐资料不会自动改变这个数值。';
     if (/已经(?:查|匹配|保存|补)|帮我(?:查|匹配|保存|补|生成|组稿)|开始(?:查|匹配|组稿)|直接(?:查|保存|生成)/.test(message)) {
       return '可以。请使用下方的操作入口继续，对话本身不会检索政策、修改企业档案或保存材料版本。' + (workId === 'assembly' ? '\n进入组稿编辑器后可按资料整理章节，并保存新版本。' : '');
@@ -84,6 +94,8 @@
 
   function actionFor(task, workId) {
     const latest = versionsFor(task)[0];
+    if (workId === 'interpret') return { route: 'policy', label: task.steps.match ? '查看政策条件' : '查看候选政策', detail: '先明确政策，再对照适用对象、申报条件和材料要求。' };
+    if (workId === 'guidance') return { route: 'guidance', label: '查看办理清单', detail: '核对提交前准备、材料版本及官方办理渠道。' };
     if (workId === 'profile') return { route: 'profile', label: '核对企业档案', detail: '确认企业信息，查看并补充资料来源。' };
     if (workId === 'match') {
       if (!task.steps.profile) return { route: 'profile', label: '先核对企业档案', detail: '企业地区与行业确认后，可以筛选候选政策。' };

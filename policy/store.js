@@ -11,8 +11,8 @@
   const id = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value) ? value : null;
   const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null;
   const stepNames = ['profile', 'match', 'diagnosis', 'assembly', 'review'];
-  const workNames = [...stepNames, 'general'];
-  const expertIds = { profile: 'company-assistant', match: 'policy-adviser', diagnosis: 'application-adviser', assembly: 'material-editor', review: 'material-reviewer', general: 'policy-adviser' };
+  const workNames = [...stepNames, 'interpret', 'guidance', 'general'];
+  const expertIds = { profile: 'company-assistant', match: 'policy-adviser', interpret:'policy-interpreter', diagnosis: 'application-adviser', assembly: 'material-editor', guidance:'procedure-adviser', review: 'material-reviewer', general: 'policy-adviser' };
   const statuses = ['ready', 'missing', 'unmet', 'unknown'];
   const taskStatuses = ['needs-input', 'processing', 'review', 'done'];
   const policyExists = (value) => DATA.policies.some((policy) => policy.id === value);

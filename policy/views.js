@@ -39,20 +39,29 @@
   const mockScore = (policy) => `<div class="mock-score"><div><span class="muted">预估申报成功率</span><strong>${E(policy.mockSuccess)}<small>%</small></strong></div><div><span class="tag tag-muted">模拟值</span><p class="muted">仅作演示，不代表获批判断。</p></div></div>`;
   const field = (label, name, value = '', options = {}) => `<label class="form-field" for="field-${E(name)}"><span>${E(label)}${options.required ? '<span aria-hidden="true"> *</span>' : ''}</span><input id="field-${E(name)}" name="${E(name)}" type="${E(options.type || 'text')}" maxlength="${options.max || 200}" value="${E(value)}"${options.required ? ' required' : ''}${options.placeholder ? ` placeholder="${E(options.placeholder)}"` : ''}${options.type === 'number' ? ' min="0" step="1"' : ''}></label>`;
 
+  const startExperts = [
+    ['profile','企业资料','理清企业情况'],
+    ['search','政策匹配','找到适用政策'],
+    ['interpret','条件解读','讲清申报要求'],
+    ['diagnosis','差距诊断','找出缺口与建议'],
+    ['assembly','材料组稿','整理资料与版本'],
+    ['guidance','办理指引','核对提交与办理'],
+  ];
+  function companyStartForm(service = '') {
+    return `<form id="company-start-form" class="company-start-form"${service ? ` data-service="${E(service)}"` : ''}><label for="start-company-name">只需告诉我企业名称</label><input id="start-company-name" name="companyName" type="text" maxlength="300" required autocomplete="organization" placeholder="请输入企业全称" value="${E(window.PolicyUI.getCompanyDraft(service))}"><button type="submit" class="button button-primary">立即申报 ${I('arrow')}</button></form>`;
+  }
   function dashboard() {
-    const experts = [
-      ['profile','企业资料','理清企业情况'],
-      ['search','政策匹配','找到适用政策'],
-      ['interpret','条件解读','讲清申报要求'],
-      ['diagnosis','差距诊断','找出缺口与建议'],
-      ['assembly','材料组稿','整理资料与版本'],
-      ['guidance','办理指引','核对提交与办理'],
-    ];
-    const cards = experts.map(([key,stage,result],index) => {
+    const cards = startExperts.map(([key,stage,result],index) => {
       const person=persona(key);
-      return `<li class="start-expert-card" data-service="${key}"><div class="start-expert-step"><span class="start-expert-number">${String(index+1).padStart(2,'0')}</span><span>${stage}</span>${index<experts.length-1?I('arrow'):''}</div><article class="start-expert-body"><span class="start-expert-portrait" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div class="start-expert-copy"><h2>${E(person.name)}</h2><p>${result}</p></div></article></li>`;
+      return `<li class="start-expert-card" data-service="${key}"><div class="start-expert-step"><span class="start-expert-number">${String(index+1).padStart(2,'0')}</span><span>${stage}</span>${index<startExperts.length-1?I('arrow'):''}</div><button type="button" class="start-expert-body" data-action="home-expert" data-service="${key}" aria-label="${E(result)}，与${E(person.name)}对话"><span class="start-expert-portrait" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div class="start-expert-copy"><h2>${result}</h2><span class="start-expert-name">${E(person.name)}</span><span class="start-expert-entry">与TA聊聊 ${I('arrow')}</span></div></button></li>`;
     }).join('');
-    return `<div class="company-start-page">${header('申报工作台')}<section class="start-experts" aria-label="专家按申报准备顺序排列，可左右滚动" tabindex="0"><ol class="start-expert-row">${cards}</ol></section><form id="company-start-form" class="company-start-form"><label for="start-company-name">企业名称</label><input id="start-company-name" name="companyName" type="text" maxlength="300" required autocomplete="organization" placeholder="请输入企业名称" value="${E(window.PolicyUI.getCompanyDraft())}"><button type="submit" class="button button-primary">开始任务 ${I('arrow')}</button></form></div>`;
+    return `<div class="company-start-page">${header('惠企政策')}${window.PolicyHomeFeed?.renderTicker() || ''}<section class="start-experts" aria-label="专家按申报准备顺序排列，可左右滚动" tabindex="0"><ol class="start-expert-row">${cards}</ol></section>${companyStartForm()}${window.PolicyHomeFeed?.renderCases() || ''}</div>`;
+  }
+  function expertEntry(service) {
+    const selected=startExperts.find(([key])=>key===service) || startExperts[0];
+    const [key,stage,result]=selected;
+    const person=persona(key);
+    return `<section class="expert-entry-page"><header class="expert-entry-top"><button class="text-button expert-entry-back" type="button" data-route="dashboard">${I('arrow')} 返回惠企政策</button><span>${stage}</span></header><div class="expert-entry-conversation"><header><span class="role-avatar" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div><h1>${E(person.name)}</h1><p>${result}</p></div></header><div class="expert-entry-message"><span class="role-avatar" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div><span>${E(person.name)}</span><p>我可以帮你${result}。先告诉我企业名称，我们从这家企业开始。</p></div></div>${companyStartForm(key)}</div></section>`;
   }
 
   function newTask({ intent = '' } = {}) {
@@ -126,5 +135,5 @@
     return `${header('办理指引', current.title, route('task', '返回项目', current.id))}<section class="content-panel"><h2>提交前的三件事</h2><ol class="guidance-steps"><li><span class="step-number">1</span><div><h3>核实正式政策与窗口</h3><p>核对主管部门发布的政策原文、申报期限和受理渠道。当前演示项目没有真实办理入口。</p>${route('policy', '回看项目条件', current.id, current.policyId, 'text-button')}</div></li><li><span class="step-number">2</span><div><h3>检查材料与授权</h3><p>核对企业名称、证明材料、签字盖章与附件要求，确保所用资料为当前有效版本。</p>${route('diagnosis', '检查准备清单', current.id, '', 'text-button')}</div></li><li><span class="step-number">3</span><div><h3>确认版本，再按官方渠道办理</h3><p>由企业相关负责人核对最终材料并提交，保留受理凭证。这里不会发起真实申报。</p>${route('assembly', '查看材料版本', current.id, '', 'text-button')}</div></li></ol></section><section class="content-panel pending-checklist"><h2>${pending.length ? '当前待完成' : '本平台材料准备已确认'}</h2>${pending.length ? `<ul class="reading-list">${pending.map((entry) => `<li>${E(entry)}</li>`).join('')}</ul>` : '<p class="muted">后续仍需按正式政策要求核对和办理，材料确认不代表政府受理或审核通过。</p>'}</section>`;
   }
 
-  window.PolicyViews = Object.freeze({ dashboard, newTask, services, task, profile, policy, diagnosis, guidance });
+  window.PolicyViews = Object.freeze({ dashboard, expertEntry, newTask, services, task, profile, policy, diagnosis, guidance });
 })();

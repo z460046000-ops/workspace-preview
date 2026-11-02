@@ -7,19 +7,23 @@
   <title>惠企政策平台</title>
   <meta name="description" content="惠企政策平台交互演示：企业档案、政策匹配、差距诊断、材料组稿与版本管理。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%230c5ce8'/%3E%3Cpath d='M11 12h18v16H11zM16 8v24m8-24v24M8 20h24' stroke='white' fill='none' stroke-width='2'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=20261102-company-start">
-  <link rel="stylesheet" href="materials.css?v=20261102-company-start">
-  <link rel="stylesheet" href="project-workspace.css?v=20261102-company-start">
-  <link rel="stylesheet" href="batch.css?v=20261102-company-start">
-  <script defer src="expert-personas.js?v=20261102-company-start"></script>
-  <script defer src="demo-data.js?v=20261102-company-start"></script>
-  <script defer src="store.js?v=20261102-company-start"></script>
-  <script defer src="materials.js?v=20261102-company-start"></script>
-  <script defer src="views.js?v=20261102-company-start"></script>
-  <script defer src="chat.js?v=20261102-company-start"></script>
-  <script defer src="project-workspace.js?v=20261102-company-start"></script>
-  <script defer src="batch.js?v=20261102-company-start"></script>
-  <script defer src="app.js?v=20261102-company-start"></script>
+  <link rel="stylesheet" href="styles.css?v=20261102-expert-home">
+  <link rel="stylesheet" href="materials.css?v=20261102-expert-home">
+  <link rel="stylesheet" href="project-workspace.css?v=20261102-expert-home">
+  <link rel="stylesheet" href="batch.css?v=20261102-expert-home">
+  <link rel="stylesheet" href="home-feed.css?v=20261102-expert-home">
+  <script defer src="expert-personas.js?v=20261102-expert-home"></script>
+  <script defer src="public-policy-data.js?v=20261102-expert-home"></script>
+  <script defer src="landing-data.js?v=20261102-expert-home"></script>
+  <script defer src="home-feed.js?v=20261102-expert-home"></script>
+  <script defer src="demo-data.js?v=20261102-expert-home"></script>
+  <script defer src="store.js?v=20261102-expert-home"></script>
+  <script defer src="materials.js?v=20261102-expert-home"></script>
+  <script defer src="views.js?v=20261102-expert-home"></script>
+  <script defer src="chat.js?v=20261102-expert-home"></script>
+  <script defer src="project-workspace.js?v=20261102-expert-home"></script>
+  <script defer src="batch.js?v=20261102-expert-home"></script>
+  <script defer src="app.js?v=20261102-expert-home"></script>
 </head>
 <body>
   <a class="skip-link" href="#page-content">跳到主要内容</a>
@@ -30,7 +34,7 @@
         <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="22" rx="3"/><path d="M11 3v28M21 3v28M2 16h28"/></svg>
         <span>惠企政策平台</span>
       </a>
-      <button class="create-button" data-route="new"><span data-icon="plus"></span>创建新任务</button>
+      <button class="create-button" data-route="new" hidden><span data-icon="plus"></span>创建新任务</button>
       <nav class="primary-nav">
         <a href="#dashboard" data-nav="dashboard"><span data-icon="grid"></span>工作台</a>
         <a href="#batch" data-nav="batch" hidden><span data-icon="search"></span>批量匹配</a>

@@ -12,6 +12,10 @@
   const documentPositions = new Map();
   const indexPositions = new Map();
   let companyStartDraft = '';
+  const expertCompanyDrafts = new Map();
+  const serviceWork = {profile:'profile',search:'match',interpret:'interpret',diagnosis:'diagnosis',assembly:'assembly',guidance:'guidance'};
+  const validService = value => Object.hasOwn(serviceWork,value) ? value : 'profile';
+  const serviceForWork = work => Object.keys(serviceWork).find(key=>serviceWork[key]===work) || 'profile';
   function draftKey(form) {
     return form && ['profile-form','source-form'].includes(form.id)
       ? `${form.dataset.task}:${form.id}:${form.dataset.source || ''}` : '';
@@ -75,7 +79,7 @@
     target.hidden = false;
     toastTimer = setTimeout(() => { target.hidden = true; }, 5200);
   }
-  const allowedRoutes = new Set(['dashboard','batch','new','services','library','task','profile','policy','diagnosis','assembly','guidance','version','compare','source']);
+  const allowedRoutes = new Set(['dashboard','batch','expert','new','services','library','task','profile','policy','diagnosis','assembly','guidance','version','compare','source']);
   function currentRoute() {
     const [route, raw = ''] = location.hash.slice(1).split('?');
     return { route: allowedRoutes.has(route) ? route : 'dashboard', params: Object.fromEntries(new URLSearchParams(raw)) };
@@ -95,7 +99,7 @@
   }
   function sidebar() {
     const state = S.getState();
-    const {route} = currentRoute();
+    const {route,params} = currentRoute();
     const researcher = B.getRole() === 'researcher';
     document.querySelector('#user-type').value = B.getRole();
     document.querySelector('[data-nav="batch"]').hidden = !researcher;
@@ -106,7 +110,7 @@
       link.classList.toggle('is-active',active);
       if (active) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
     });
-    const projectRoute = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'].includes(route);
+    const projectRoute = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'].includes(route) || route==='expert' && Boolean(params.task && S.getTask(params.task));
     document.querySelector('#recent-projects').innerHTML = state.tasks.map(task => `<div class="recent-project-row"><button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button><button type="button" class="icon-button project-delete" data-action="delete-project" data-task="${escape(task.id)}" aria-label="删除项目：${escape(task.title)}" title="删除项目">${icon('trash')}</button></div>`).join('');
     document.querySelector('#storage-status').textContent = state.storageError || state.loadWarning || '';
   }
@@ -117,6 +121,7 @@
     return `<div class="source-page"><header class="page-header"><div><h1>${escape(source.name)}</h1><p class="muted">${escape(task.company.name)}</p></div><button class="button button-secondary" data-route="profile" data-task="${escape(task.id)}">返回企业档案</button></header><p class="source-context">${source.provided ? '当前资料已用于准备清单。修改后请重新核对材料；历史版本的引用保持原样。' : '录入这份资料的内容，保存后会更新对应的准备项。'}</p><form id="source-form" data-task="${escape(task.id)}" data-source="${escape(source.id)}"><label class="form-field" for="source-text" style="margin-top:26px"><span>资料内容</span></label><textarea id="source-text" name="text" class="source-editor" maxlength="40000" required placeholder="粘贴已确认的资料内容……">${escape(source.text)}</textarea><div class="form-actions source-form-actions"><button type="submit" class="button button-primary">保存资料</button></div></form></div>`;
   }
   function render() {
+    window.PolicyHomeFeed?.unmount();
     const previousWorkspace = page.querySelector('.project-workspace');
     const previousContextTop = page.querySelector('.workspace-context')?.scrollTop || 0;
     const previousCardsLeft = page.querySelector('.workspace-status-grid')?.scrollLeft || 0;
@@ -125,7 +130,7 @@
     const focusedInput = document.activeElement?.id === 'adviser-message';
     captureFormDraft();
     if(previousWorkspace && S.getTask(previousWorkspace.dataset.task)){
-      if(previousWorkspace.dataset.viewRoute === 'task')indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
+      if(['task','expert'].includes(previousWorkspace.dataset.viewRoute))indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
       else documentPositions.set(previousWorkspace.dataset.documentKey,previousContentTop);
     }
     window.PolicyChat.captureView();
@@ -133,27 +138,30 @@
     if (route === 'batch' && B.getRole() !== 'researcher') B.setRole('researcher');
     const versionId = route === 'version' ? params.id : route === 'compare' ? params.left : '';
     const versionTask = S.getState().versions.find(version => version.id === versionId)?.taskId;
-    const taskId = versionTask || params.task || (['task','profile','diagnosis','assembly','guidance'].includes(route) ? params.id : '') || S.getState().activeTaskId;
+    // 首页专家入口必须显式绑定企业项目，不能用最近活动项目兜底。
+    const taskId = route === 'expert' ? (params.task || '') : versionTask || params.task || (['task','profile','diagnosis','assembly','guidance'].includes(route) ? params.id : '') || S.getState().activeTaskId;
     if (taskId && S.getTask(taskId) && S.getState().activeTaskId !== taskId) S.setActiveTask(taskId);
     const task = S.getTask(taskId);
     const projectRoutes = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'];
-    const isProject = projectRoutes.includes(route);
+    const isProject = projectRoutes.includes(route) || route==='expert' && Boolean(task);
     const sameProject = isProject && previousWorkspace?.dataset.task === taskId;
     if (previousWorkspace && !sameProject) W.leave(previousWorkspace.dataset.task);
     const routeWork = {profile:'profile',policy:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review',version:'review',compare:'review'};
-    const workId = task ? W.selectedWork(task,params.work || routeWork[route]) : '';
+    const workId = task ? W.selectedWork(task,route==='expert' ? serviceWork[validService(params.service || serviceForWork(params.work))] : params.work || routeWork[route]) : '';
+    const capabilities = route==='expert' || params.experts==='1' || ['interpret','guidance'].includes(workId);
     const nextDocumentKey=documentKey(taskId,route,params);
-    if (task && projectRoutes.includes(route) && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
+    if (task && isProject && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
     const renderers = {
       dashboard:() => V.dashboard({filter:params.filter}), new:() => V.newTask({intent:params.intent}), services:() => V.services({type:params.type,query:params.query}),
       batch:() => B.render(),
+      expert:() => task ? '' : V.expertEntry(validService(params.service)),
       library:() => M.renderLibrary(), task:() => '', profile:() => V.profile(taskId), policy:() => V.policy(taskId,params.policy || params.id),
       diagnosis:() => V.diagnosis(taskId), assembly:() => M.renderAssembly(taskId), guidance:() => V.guidance(taskId),
       version:() => M.renderVersion(params.id), compare:() => M.renderCompare(params.left,params.right), source:() => renderSource(taskId,params.id),
     };
     try {
       const content = renderers[route]();
-      page.innerHTML = isProject ? W.render(taskId,{workId,content,route}) : content;
+      page.innerHTML = isProject ? W.render(taskId,{workId,content,route,capabilities}) : content;
       const workspace=page.querySelector('.project-workspace');
       if(workspace)workspace.dataset.documentKey=nextDocumentKey;
       document.body.classList.toggle('in-project',isProject && Boolean(page.querySelector('.project-workspace')));
@@ -165,6 +173,7 @@
     }
     sidebar();
     B.syncSelection();
+    window.PolicyHomeFeed?.mount();
     const title = page.querySelector('h1')?.textContent || '惠企政策平台';
     document.title = `${title} · 惠企政策平台`;
     window.PolicyChat.restoreView();
@@ -172,7 +181,7 @@
     const documentContent=page.querySelector('.workspace-content');
     if(documentContent)documentContent.scrollTop=documentPositions.get(nextDocumentKey) || 0;
     const context=page.querySelector('.workspace-context');
-    if(context && route === 'task')context.scrollTop=indexPositions.get(taskId) || 0;
+    if(context && ['task','expert'].includes(route))context.scrollTop=indexPositions.get(taskId) || 0;
     if (sameProject) {
       const cards = page.querySelector('.workspace-status-grid');
       if (cards) cards.scrollLeft = previousCardsLeft;
@@ -194,7 +203,7 @@
     cards?.addEventListener('scroll',syncExpertControls,{passive:true});
     syncExpertControls();
   }
-  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render,getCompanyDraft:()=>companyStartDraft});
+  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render,getCompanyDraft:service=>service ? expertCompanyDrafts.get(service) || '' : companyStartDraft});
   document.querySelectorAll('[data-icon]').forEach(element => {element.innerHTML = icon(element.dataset.icon);});
   S.subscribe(sidebar);
   window.addEventListener('hashchange',render);
@@ -224,13 +233,18 @@
   function useService(serviceId, taskId) {
     const task = S.getTask(taskId || S.getState().activeTaskId);
     if (!task) { navigate('new',{intent:serviceId}); return; }
-    const destinations = {profile:'profile',search:'match',interpret:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review'};
+    const destinations = serviceWork;
     if (!destinations[serviceId]) return;
     navigate('task',{task:task.id,work:destinations[serviceId]});
   }
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest('button[data-action],a[data-action],button[data-route],a[data-route]') : null;
     if (!target) return;
+    if (window.PolicyHomeFeed?.handleClick(target)) return;
+    if (target.dataset.action==='home-expert') {
+      navigate('expert',{service:validService(target.dataset.service)});
+      return;
+    }
     if (target.dataset.action === 'delete-project') {
       event.preventDefault();
       const task=S.getTask(target.dataset.task);
@@ -254,6 +268,9 @@
       const params = {};
       if (target.dataset.task) params.task = target.dataset.task;
       if (target.dataset.work) params.work = target.dataset.work;
+      const fromCapabilities=page.querySelector('.project-workspace')?.dataset.capabilities==='true';
+      if (target.dataset.experts==='1' || fromCapabilities && target.dataset.task) params.experts='1';
+      if (target.dataset.route==='expert') params.service=serviceForWork(target.dataset.work);
       if (target.dataset.id) {
         if (target.dataset.route === 'policy') params.policy = target.dataset.id;
         else params.id = target.dataset.id;
@@ -274,7 +291,7 @@
     } else if (action === 'dashboard-filter') navigate('dashboard',{filter:target.dataset.id});
     else if (action === 'workspace-expert' && task) {
       const current=currentRoute();
-      navigate(current.route,{...current.params,task:task.id,work:target.dataset.work});
+      navigate(current.route,{...current.params,task:task.id,work:target.dataset.work,...(current.route==='expert'?{service:serviceForWork(target.dataset.work)}:{})});
     } else if (action === 'workspace-expert-scroll') {
       const nav=page.querySelector('.workspace-status-grid');
       if(nav){nav.scrollLeft+=Number(target.dataset.direction)*Math.max(140,nav.clientWidth*.7);syncExpertControls();}
@@ -324,7 +341,11 @@
     B.handleChange(target);
   });
   document.addEventListener('input', event => {
-    if (event.target?.id === 'start-company-name') companyStartDraft = event.target.value.slice(0,300);
+    if (event.target?.id === 'start-company-name') {
+      const service=event.target.closest('form')?.dataset.service;
+      if(service)expertCompanyDrafts.set(service,event.target.value.slice(0,300));
+      else companyStartDraft=event.target.value.slice(0,300);
+    }
     if (event.target?.id === 'task-request') S.saveTaskDraft(event.target.value);
     const form=event.target?.closest?.('#profile-form,#source-form');
     if(form){delete form.dataset.draftSaved;captureFormDraft();}
@@ -351,8 +372,14 @@
       button.disabled=true;
       const task=S.createTask({title:`${name} · 政策申报`,request:`为${name}梳理企业资料，查找适用政策并准备申报材料。`,company:{name,region:'',industry:''}});
       if (!task) {delete form.dataset.started;button.disabled=false;formError(form,'任务未能创建，请重试。');return;}
-      companyStartDraft='';
-      navigate('task',{task:task.id,work:'profile'});
+      if(form.dataset.service){
+        const service=validService(form.dataset.service);
+        expertCompanyDrafts.delete(service);
+        navigate('expert',{task:task.id,service});
+      } else {
+        companyStartDraft='';
+        navigate('task',{task:task.id,work:'profile'});
+      }
     } else if (form.id === 'new-task-form') {
       const request=value('request'),name=value('companyName'),region=value('region'),industry=value('industry');
       if (!request || !name || !region || !industry) {formError(form,'请填写企业名称、地区、行业和申报目标。');return;}
