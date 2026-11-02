@@ -6,7 +6,7 @@
     ['match','政策匹配',window.PolicyPersonas.get('match').name],
     ['diagnosis','差距诊断',window.PolicyPersonas.get('diagnosis').name],
     ['assembly','材料组稿',window.PolicyPersonas.get('assembly').name],
-    ['review','人工确认','企业负责人'],
+    ['review','人工确认',window.PolicyPersonas.get('review').name],
   ];
   const ranks = {waiting:0,review:0,ready:1,blocked:2,done:3};
   const orders = new Map();
@@ -40,20 +40,15 @@
     if (validWork(task.selectedWorkId)) return task.selectedWorkId;
     return [...workItems(task)].sort((a,b) => a.rank-b.rank)[0].id;
   }
-  function orderedItems(task, selected) {
+  function orderedItems(task) {
     const items = workItems(task);
-    const sorted = [...items].sort((a,b) => a.rank-b.rank || definitions.findIndex(([id]) => id === a.id)-definitions.findIndex(([id]) => id === b.id));
     const previous = orders.get(task.id);
-    if (previous?.includes(selected)) {
-      const current = sorted.find(item => item.id === selected);
-      const others = sorted.filter(item => item.id !== selected);
-      others.splice(previous.indexOf(selected),0,current);
-      orders.set(task.id,others.map(item => item.id));
-      return others;
-    }
+    if (previous) return previous.map(id => items.find(item => item.id === id));
+    const sorted = [...items].sort((a,b) => a.rank-b.rank || definitions.findIndex(([id]) => id === a.id)-definitions.findIndex(([id]) => id === b.id));
     orders.set(task.id,sorted.map(item => item.id));
     return sorted;
   }
+  function leave(taskId) { orders.delete(taskId); }
   function contentDestination(task, workId) {
     if (workId === 'review') {
       const latest = versionsFor(task)[0];
@@ -78,6 +73,7 @@
     const versions=versionsFor(task);
     const policy=window.PolicyData.policies.find(p=>p.id === task.policyId);
     const ready=task.requirements.filter(r=>r.status === 'ready').length;
+    const count=definitions.filter(([id])=>task.steps[id]).length;
     const routeButton=(route,label,id='') => `<button class="text-button" data-route="${route}" data-task="${E(task.id)}" data-work="${item.id}"${id ? ` data-id="${E(id)}"` : ''}>${E(label)} ${I('arrow')}</button>`;
     let result='';
     if (item.id === 'profile') result=`<p>${task.steps.profile ? '企业档案已确认' : '企业档案待你确认'}</p>${routeButton('profile','查看企业档案')}`;
@@ -85,22 +81,36 @@
     else if (item.id === 'diagnosis') result=task.steps.diagnosis ? `<p>已具备 ${ready}/${task.requirements.length} 项</p><ul>${task.requirements.filter(r=>r.status !== 'ready').map(r=>`<li>${E(r.label)}</li>`).join('') || '<li>清单已具备，待核对正文。</li>'}</ul>${routeButton('diagnosis','查看差距清单')}` : '<p>对照政策核对后，将在这里显示缺口。</p>';
     else if (item.id === 'assembly') result=`<p>${versions.length ? `已保存 ${versions.length} 个版本` : '尚未保存材料版本'}</p>${routeButton('assembly','打开组稿编辑器')}`;
     else result=versions[0] ? `<p>V${versions[0].number} · ${versions[0].status === 'confirmed' ? '已确认' : '待核对'}</p>${routeButton('version','核对正文与来源',versions[0].id)}${routeButton('guidance','查看办理指引')}` : `<p>保存材料首版后，在这里核对。</p>${routeButton('assembly','整理材料')}`;
-    return `<aside class="workspace-context" aria-label="项目摘要与成果"><details class="workspace-context-details" open><summary>项目摘要与成果 ${I('arrow')}</summary><div><section class="workspace-summary"><h2>项目摘要</h2><dl><div><dt>企业</dt><dd>${E(task.company.name || '待填写')}</dd></div><div><dt>地区</dt><dd>${E(task.company.region || '待填写')}</dd></div><div><dt>申报政策</dt><dd>${task.steps.match ? E(policy?.title || '待选择') : '待匹配'}</dd></div><div><dt>资料准备</dt><dd>${ready}/${task.requirements.length} 项</dd></div></dl></section><section class="workspace-result"><h2>${E(item.title)}成果</h2>${result}</section><section class="workspace-source-list"><h2>项目资料</h2>${task.sources.length ? task.sources.map(source=>`<button data-action="view-source" data-task="${E(task.id)}" data-id="${E(source.id)}" data-work="${item.id}">${I('file')}<span>${E(source.name)}<small>${source.provided ? '已提供' : '待补充'}</small></span>${I('arrow')}</button>`).join('') : '<p class="muted">尚未提供资料</p>'}</section><section class="workspace-version-list"><h2>材料版本</h2>${versions.length ? versions.map(version=>routeButton('version',`V${version.number} · ${version.status === 'confirmed' ? '已确认' : '待核对'}`,version.id)).join('') : '<p class="muted">尚未保存</p>'}</section></div></details></aside>`;
+    return `<aside class="workspace-context" aria-label="项目资料与进度">
+      <section class="project-progress" aria-label="整体项目进度"><div><span>申报准备进度</span><strong>${Math.round(count/5*100)}<small>%</small></strong></div><progress value="${count}" max="5" aria-label="申报准备进度：${count}/5 项工作已完成"></progress><small>${count}/5 项工作已完成</small></section>
+      <details class="workspace-context-details" open><summary>项目资料与成果 ${I('arrow')}</summary><div>
+        <section class="workspace-summary"><h2>项目摘要</h2><dl><div><dt>企业</dt><dd>${E(task.company.name || '待填写')}</dd></div><div><dt>地区</dt><dd>${E(task.company.region || '待填写')}</dd></div><div><dt>申报政策</dt><dd>${task.steps.match ? E(policy?.title || '待选择') : '待匹配'}</dd></div><div><dt>资料准备</dt><dd>${ready}/${task.requirements.length} 项</dd></div></dl></section>
+        <section class="workspace-source-list"><h2>项目资料</h2>${task.sources.length ? task.sources.map(source=>`<button data-action="view-source" data-task="${E(task.id)}" data-id="${E(source.id)}" data-work="${item.id}">${I('file')}<span>${E(source.name)}<small>${source.provided ? '已提供' : '待补充'}</small></span>${I('arrow')}</button>`).join('') : '<p class="muted">尚未提供资料</p>'}</section>
+        <section class="workspace-result" data-result-work="${item.id}"><h2>${E(item.title)}成果</h2>${result}</section>
+        <section class="workspace-version-list"><h2>材料版本</h2>${versions.length ? versions.map(version=>routeButton('version',`V${version.number} · ${version.status === 'confirmed' ? '已确认' : '待核对'}`,version.id)).join('') : '<p class="muted">尚未保存</p>'}</section>
+      </div></details>
+    </aside>`;
   }
   function render(taskId,{workId,content='',route='task'}={}) {
     const task=S().getTask(taskId);
     if (!task) return '<div class="empty-state"><h1>没有找到这个项目</h1><button class="button button-secondary" data-route="dashboard">查看所有项目</button></div>';
     const E=U().escape,I=U().icon;
     const selected=selectedWork(task,workId);
-    const items=orderedItems(task,selected),item=items.find(i=>i.id === selected);
-    const count=definitions.filter(([id])=>task.steps[id]).length;
+    const items=orderedItems(task),item=items.find(i=>i.id === selected);
     const isChat=route === 'task';
     const cards = items.map(work => {
       const persona = window.PolicyPersonas.get(work.id);
-      const avatar = work.id !== 'review' ? `<span class="work-expert-avatar" aria-hidden="true" style="--expert-x:${persona.x}%;--expert-y:${persona.y}%"></span>` : `<span class="work-human-avatar" aria-hidden="true">${I('building')}</span>`;
-      return `<button class="work-status-card${work.id === selected ? ' is-selected' : ''}" data-status="${work.status}" data-route="task" data-task="${E(task.id)}" data-work="${work.id}" aria-label="${E(work.owner)}，${E(work.title)}，${E(work.label)}"${work.id === selected ? ' aria-current="true"' : ''}><div class="work-status-top"><span>${E(work.title)}</span><span>${E(work.label)}</span></div><div class="work-expert-identity">${avatar}<h2>${E(work.owner)}</h2></div><p>${E(work.reason)}</p></button>`;
+      const avatar = `<span class="work-expert-avatar" aria-hidden="true" style="--expert-x:${persona.x}%;--expert-y:${persona.y}%"></span>`;
+      return `<button id="expert-tab-${work.id}" role="tab" aria-selected="${work.id === selected}" aria-controls="workspace-panel" tabindex="${work.id === selected ? '0' : '-1'}" class="work-status-card${work.id === selected ? ' is-selected' : ''}" data-status="${work.status}" data-route="task" data-task="${E(task.id)}" data-work="${work.id}" aria-label="${E(work.owner)}，${E(work.title)}，${E(work.label)}" title="${E(work.reason)}"><div class="work-status-top"><span>${E(work.title)}</span><span>${E(work.label)}</span></div><div class="work-expert-identity">${avatar}<h2>${E(work.owner)}</h2></div></button>`;
     }).join('');
-    return `<div class="project-workspace"><header class="project-workspace-header"><div class="project-heading"><button class="icon-button" data-route="dashboard" aria-label="查看所有项目">${I('arrow')}</button><div><h1>${E(task.title)}</h1><p class="muted">${E(task.company.name || '企业档案待填写')}</p></div></div><div class="project-progress"><div><span>申报准备进度</span><strong>${Math.round(count/5*100)}<small>%</small></strong></div><progress value="${count}" max="5" aria-label="申报准备进度：${count}/5 项工作已完成"></progress><small>${count}/5 项工作已完成</small></div></header><nav class="workspace-status-grid" aria-label="项目专家与负责事项">${cards}</nav><div class="workspace-body"><section class="workspace-main" aria-label="${E(item.title)}处理区"><div class="workspace-work-heading"><div><h2>${E(item.title)}</h2><span class="muted">${E(item.label)}</span></div><div class="workspace-tabs" aria-label="工作视图"><button data-action="workspace-tab" data-id="chat" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? 'is-active' : ''}" aria-pressed="${isChat}">专家对话</button><button data-action="workspace-tab" data-id="content" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? '' : 'is-active'}" aria-pressed="${!isChat}">工作内容</button></div></div>${isChat ? window.PolicyChat.render(task.id,selected) : `<div class="workspace-content">${documentContent(content)}</div>`}</section>${renderContext(task,item)}</div></div>`;
+    const tabsHTML=`<div class="workspace-tabs" aria-label="工作视图"><button data-action="workspace-tab" data-id="chat" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? 'is-active' : ''}" aria-pressed="${isChat}">专家对话</button><button data-action="workspace-tab" data-id="content" data-task="${E(task.id)}" data-work="${selected}" class="${isChat ? '' : 'is-active'}" aria-pressed="${!isChat}">工作内容</button></div>`;
+    const panel=isChat ? window.PolicyChat.render(task.id,selected,{tabsHTML,statusLabel:item.label}) : `<div class="workspace-work-heading"><div><h2>${E(item.title)}</h2><span class="muted">${E(item.label)}</span></div>${tabsHTML}</div><div class="workspace-content">${documentContent(content)}</div>`;
+    return `<div class="project-workspace" data-task="${E(task.id)}" data-work="${selected}" data-route="${E(route)}"><div class="workspace-body">
+      <section class="workspace-main" aria-label="项目专家工作区">
+        <header class="project-workspace-header"><div class="project-heading"><button class="icon-button" data-route="dashboard" aria-label="查看所有项目">${I('arrow')}</button><div><h1 title="${E(task.title)}">${E(task.title)}</h1><p class="muted">${E(task.company.name || '企业档案待填写')}</p></div></div></header>
+        <section class="workspace-conversation" aria-label="专家协作"><nav class="workspace-status-grid" role="tablist" aria-label="项目专家与负责事项">${cards}</nav><section id="workspace-panel" class="workspace-panel" role="tabpanel" aria-labelledby="expert-tab-${selected}">${panel}</section></section>
+      </section>${renderContext(task,item)}
+    </div></div>`;
   }
-  window.PolicyWorkspace=Object.freeze({workItems,selectedWork,orderedItems,contentDestination,render});
+  window.PolicyWorkspace=Object.freeze({workItems,selectedWork,orderedItems,contentDestination,leave,render});
 })();

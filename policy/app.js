@@ -7,6 +7,11 @@
   const M = window.PolicyMaterials;
   const W = window.PolicyWorkspace;
   const page = document.querySelector('#page-content');
+  const narrowWorkspace = window.matchMedia?.('(max-width: 900px)');
+  narrowWorkspace?.addEventListener('change', event => {
+    const details = page.querySelector('.workspace-context-details');
+    if (details && !event.matches) details.open = true;
+  });
   const paths = {
     plus:'M12 5v14M5 12h14', grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
     layers:'m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5', folder:'M3 7V5h6l2 2h10v13H3V7Z',
@@ -65,6 +70,15 @@
     return `<div class="source-page"><header class="page-header"><div><h1>${escape(source.name)}</h1><p class="muted">${escape(task.company.name)}</p></div><button class="button button-secondary" data-route="profile" data-task="${escape(task.id)}">返回企业档案</button></header><p class="source-context">${source.provided ? '当前资料已用于准备清单。修改后请重新核对材料；历史版本的引用保持原样。' : '录入这份资料的内容，保存后会更新对应的准备项。'}</p><form id="source-form" data-task="${escape(task.id)}" data-source="${escape(source.id)}"><label class="form-field" for="source-text" style="margin-top:26px"><span>资料内容</span></label><textarea id="source-text" name="text" class="source-editor" maxlength="40000" required placeholder="粘贴已确认的资料内容……">${escape(source.text)}</textarea><div class="form-actions"><span class="muted">只使用已提供的企业事实。</span><button type="submit" class="button button-primary">保存资料</button></div></form></div>`;
   }
   function render() {
+    const previousWorkspace = page.querySelector('.project-workspace');
+    const previousContextTop = page.querySelector('.workspace-context')?.scrollTop || 0;
+    const previousContextOpen = page.querySelector('.workspace-context-details')?.open;
+    const previousCardsLeft = page.querySelector('.workspace-status-grid')?.scrollLeft || 0;
+    const previousContentTop = page.querySelector('.workspace-content')?.scrollTop || 0;
+    const focusedExpert = document.activeElement?.closest('.work-status-card')?.dataset.work;
+    const focusedView = document.activeElement?.closest('[data-action="workspace-tab"]')?.dataset.id;
+    const focusedInput = document.activeElement?.id === 'adviser-message';
+    window.PolicyChat.captureView();
     const {route,params} = currentRoute();
     const versionId = route === 'version' ? params.id : route === 'compare' ? params.left : '';
     const versionTask = S.getState().versions.find(version => version.id === versionId)?.taskId;
@@ -72,6 +86,9 @@
     if (taskId && S.getTask(taskId) && S.getState().activeTaskId !== taskId) S.setActiveTask(taskId);
     const task = S.getTask(taskId);
     const projectRoutes = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'];
+    const isProject = projectRoutes.includes(route);
+    const sameProject = isProject && previousWorkspace?.dataset.task === taskId;
+    if (previousWorkspace && !sameProject) W.leave(previousWorkspace.dataset.task);
     const routeWork = {profile:'profile',policy:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review',version:'review',compare:'review'};
     const workId = task ? W.selectedWork(task,routeWork[route] || params.work) : '';
     if (task && projectRoutes.includes(route) && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
@@ -83,24 +100,62 @@
     };
     try {
       const content = renderers[route]();
-      page.innerHTML = projectRoutes.includes(route) ? W.render(taskId,{workId,content,route}) : content;
-      document.body.classList.toggle('in-project',projectRoutes.includes(route));
+      page.innerHTML = isProject ? W.render(taskId,{workId,content,route}) : content;
+      document.body.classList.toggle('in-project',isProject && Boolean(page.querySelector('.project-workspace')));
     }
     catch (error) {
       console.error('页面呈现失败',error);
+      document.body.classList.remove('in-project');
       page.innerHTML = '<section class="empty-state"><h1>当前页面未能打开</h1><p>已保存的任务会保留，请返回工作台重试。</p><button class="button button-primary" data-route="dashboard">返回工作台</button></section>';
     }
     sidebar();
     const title = page.querySelector('h1')?.textContent || '惠企政策平台';
     document.title = `${title} · 惠企政策平台`;
-    page.focus({preventScroll:true});
-    window.scrollTo({top:0,behavior:'instant'});
+    window.PolicyChat.restoreView();
+    if (sameProject) {
+      const context = page.querySelector('.workspace-context');
+      if (context) context.scrollTop = previousContextTop;
+      const details = page.querySelector('.workspace-context-details');
+      if (details && previousContextOpen !== undefined) details.open = previousContextOpen;
+      if (details && narrowWorkspace?.matches === false) details.open = true;
+      const cards = page.querySelector('.workspace-status-grid');
+      if (cards) cards.scrollLeft = previousCardsLeft;
+      if (previousWorkspace.dataset.route === route && previousWorkspace.dataset.work === workId) {
+        const content = page.querySelector('.workspace-content');
+        if (content) content.scrollTop = previousContentTop;
+      }
+      const focusTarget = focusedExpert ? page.querySelector(`#expert-tab-${focusedExpert}`)
+        : focusedView ? page.querySelector(`[data-action="workspace-tab"][data-id="${focusedView}"]`)
+        : focusedInput ? page.querySelector('#adviser-message') : null;
+      focusTarget?.focus({preventScroll:true});
+    } else {
+      page.focus({preventScroll:true});
+      window.scrollTo({top:0,behavior:'instant'});
+    }
+    const cards = page.querySelector('.workspace-status-grid');
+    const activeCard = cards?.querySelector('[aria-selected="true"]');
+    if (cards && activeCard && cards.scrollWidth > cards.clientWidth) {
+      const bounds = cards.getBoundingClientRect();
+      const activeBounds = activeCard.getBoundingClientRect();
+      if (activeBounds.left < bounds.left) cards.scrollLeft -= bounds.left - activeBounds.left + 10;
+      else if (activeBounds.right > bounds.right) cards.scrollLeft += activeBounds.right - bounds.right + 10;
+    }
   }
   window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render});
   document.querySelectorAll('[data-icon]').forEach(element => {element.innerHTML = icon(element.dataset.icon);});
   S.subscribe(sidebar);
   window.addEventListener('hashchange',render);
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeMenu();
+    const current = event.target instanceof Element ? event.target.closest('.work-status-card[role="tab"]') : null;
+    if (!current || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    const cards = [...page.querySelectorAll('.work-status-card[role="tab"]')];
+    const index = cards.indexOf(current);
+    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? cards.length-1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + cards.length) % cards.length;
+    event.preventDefault();
+    cards[nextIndex].focus({preventScroll:true});
+    cards[nextIndex].click();
+  });
 
   const sampleTexts = {
     'research-expenses':'【虚构演示资料】研发费用归集表摘要：演示年度研发费用为128万元，归属于“企业协同数据管理工具”项目。分项账目、归集口径及审计结果须由企业财务负责人核对。本资料只用于演示组稿流程。',

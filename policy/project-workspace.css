@@ -1,178 +1,311 @@
-/* 项目工作区：状态驱动的事项卡、专家对话与项目成果。 */
-.project-workspace { min-width: 0; }
-.project-workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 36px; margin-bottom: 27px; }
-.project-heading { min-width: 0; display:flex; align-items:flex-start; gap:12px; }
-.project-heading > .icon-button { margin-top:4px; flex-shrink:0; }
-.project-heading > .icon-button svg { transform:rotate(180deg); }
-.project-heading > div > p { margin-top:7px; font-size:12px; }
-.project-heading h1 { font-size: 27px; letter-spacing: -.03em; line-height: 1.5; overflow-wrap: anywhere; }
-.project-heading > p { color: var(--muted); font-size: 12px; margin-top: 7px; }
-.project-heading .text-button { margin-bottom: 8px; }
-.project-progress { display: grid; grid-template-columns: 1fr auto; column-gap: 18px; row-gap: 7px; width: 220px; flex: 0 0 220px; padding-top: 5px; font-variant-numeric: tabular-nums; }
-.project-progress > span { font-size: 12px; color: var(--muted); }
-.project-progress > div { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:16px; }
-.project-progress > div > span { font-size:12px; color:var(--muted); }
-.project-progress strong small { font-size:12px; margin-left:2px; }
-.project-progress strong { color: var(--ink); font-size: 18px; line-height: 1.3; font-weight: 600; }
-.project-progress progress { grid-column: 1 / -1; height: 5px; margin-top: 2px; }
-.project-progress progress::-webkit-progress-value { background: var(--blue); }
-.project-progress progress::-moz-progress-bar { background: var(--blue); }
-.project-progress small { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+/* 项目详情采用独立视口工作区；普通工作台继续按页面自然滚动。 */
+.in-project { overflow: hidden; }
+.in-project .main-shell { height: 100dvh; min-height: 0; overflow: hidden; }
+.in-project #main-content { height: 100%; min-height: 0; max-width: none; padding: 20px 24px; }
+.in-project #page-content { height: 100%; min-height: 0; }
+.in-project .project-workspace { height: 100%; min-width: 0; min-height: 0; }
+.in-project .workspace-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0; align-items: stretch; }
+.in-project .workspace-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
+.in-project .project-workspace-header { display: flex; align-items: center; flex: 0 0 auto; min-width: 0; min-height: 52px; gap: 16px; margin: 0 0 14px; }
+.in-project .project-heading { display: flex; align-items: center; min-width: 0; gap: 10px; }
+.in-project .project-heading > .icon-button { flex: 0 0 32px; width: 32px; height: 32px; min-height: 32px; }
+.in-project .project-heading > .icon-button svg { transform: rotate(180deg); width: 18px; height: 18px; }
+.in-project .project-heading > div { min-width: 0; }
+.in-project .project-heading h1 { font-size: 21px; line-height: 1.4; letter-spacing: -.025em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-project .project-heading > div > p { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-project .workspace-conversation { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; border: 1px solid #e3e8ef; border-radius: 12px; background: #fff; overflow: hidden; }
 
-.workspace-status-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 11px; margin-bottom: 32px; }
-.work-status-card { min-width: 0; padding: 16px 17px 15px; border-radius: 12px; background: #f5f6f8; text-align: left; box-shadow: inset 0 0 0 1px transparent; transition: background .16s, box-shadow .16s; }
-.work-status-card:hover { background: #edf1f7; }
-.work-status-card.is-selected { background: #edf3ff; box-shadow: inset 0 0 0 1.5px #759ce0; }
-.work-status-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 15px; color: #697585; font-size: 11px; font-variant-numeric: tabular-nums; }
-.work-status-top > span:first-child { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 6px; background: #e7eaf0; color: #5a697e; font-size: 10px; }
-.work-status-top svg { width: 12px; height: 12px; }
-.work-status-top .tag { padding: 3px 6px; font-size: 10px; }
-.work-status-card h2 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.work-owner { display:block; color: #606d7e; font-size: 11px; margin-bottom: 11px; }
-.work-status-card > p:not(.work-owner) { margin: 0; color: #6d7785; font-size: 11px; line-height: 1.8; min-height: 3.6em; overflow-wrap: anywhere; }
-.work-status-card[data-status="waiting"] .work-status-top > span:last-child,
-.work-status-card[data-status="review"] .work-status-top > span:last-child { color: #8a541c; }
-.work-status-card[data-status="waiting"] .work-status-top > span:first-child,
-.work-status-card[data-status="review"] .work-status-top > span:first-child { color: #8a541c; background: #f4e9d8; }
-.work-status-card[data-status="done"] .work-status-top > span:last-child { color: #28664b; }
-.work-status-card[data-status="done"] .work-status-top > span:first-child { background: #e4eee6; color: #28664b; }
-.work-status-card[data-status="ready"] .work-status-top > span:last-child { color: #255caa; }
-.work-status-card[data-status="blocked"] { background: #f7f7f8; }
-.work-status-card[data-status="blocked"] .work-status-top { color: #747c87; }
-.work-status-card.is-selected h2 { color: #174faf; }
+/* 专家卡与下方同一面板关联；卡片高度不随状态文案改变。 */
+.in-project .workspace-status-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: 86px; flex: 0 0 auto; gap: 8px; margin: 0; padding: 10px 10px 12px; min-width: 0; overflow-x: auto; scrollbar-width: thin; scroll-padding-inline: 10px; }
+.in-project .work-status-card { display: flex; flex-direction: column; justify-content: center; min-width: 0; height: 86px; padding: 10px; text-align: left; border-radius: 8px; background: #f5f6f8; box-shadow: inset 0 0 0 1px transparent; transition: background .16s, box-shadow .16s; }
+.in-project .work-status-card:hover { background: #eef2f7; }
+.in-project .work-status-card.is-selected,
+.in-project .work-status-card[aria-selected="true"] { background: #edf3ff; box-shadow: inset 0 0 0 1.5px #83a7e3; }
+.in-project .work-status-card:focus-visible { outline-offset: -3px; }
+.in-project .work-status-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 15px; margin: 0 0 8px; color: #6d7887; font-size: 10px; line-height: 1.5; }
+.in-project .work-status-top > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-project .work-status-top > span:first-child { display: inline; width: auto; height: auto; padding: 0; border-radius: 0; background: transparent; font-size: 10px; color: #6c7786; }
+.in-project .work-status-top > span:last-child { font-size: 10px; }
+.in-project .work-status-card[data-status="waiting"] .work-status-top > span:last-child,
+.in-project .work-status-card[data-status="review"] .work-status-top > span:last-child { color: #8a541c; }
+.in-project .work-status-card[data-status="done"] .work-status-top > span:last-child { color: #28664b; }
+.in-project .work-status-card[data-status="ready"] .work-status-top > span:last-child { color: #285caa; }
+.in-project .work-status-card[data-status="blocked"] .work-status-top > span:last-child { color: #7c8491; }
+.in-project .work-expert-identity { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; }
+.in-project .work-expert-identity h2 { margin: 0; font-size: 12px; line-height: 1.55; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.in-project .work-status-card.is-selected h2,
+.in-project .work-status-card[aria-selected="true"] h2 { color: #174faf; }
+.in-project .work-expert-avatar { display: block; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; background-position: var(--expert-x) var(--expert-y); background-repeat: no-repeat; background-color: #e5ebf4; }
+.in-project .work-human-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 8px; color: #66758b; background: #e7ebf1; }
+.in-project .work-human-avatar .icon { width: 18px; height: 18px; }
+.in-project .work-status-card.is-selected .work-human-avatar { color: #285b9e; background: #dfe9fa; }
+.in-project .workspace-panel { flex: 1 1 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-top: 1px solid #e4eaf2; overflow: hidden; }
+.in-project .workspace-tabs { display: flex; align-items: center; flex: 0 0 auto; gap: 18px; border: 0; margin: 0; }
+.in-project .workspace-tabs button { position: relative; color: #707b8a; font-size: 12px; line-height: 20px; min-height: 34px; padding: 6px 0; white-space: nowrap; }
+.in-project .workspace-tabs button:hover { color: var(--ink); }
+.in-project .workspace-tabs button.is-active { color: #2459a8; font-weight: 600; }
+.in-project .workspace-tabs button.is-active::after { content: ""; position: absolute; inset-inline: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--blue); }
 
-.workspace-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 36px; }
-.workspace-main { min-width: 0; }
-.workspace-work-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
-.workspace-work-heading h2 { font-size: 18px; }
-.workspace-work-heading > div > .muted { font-size:11px; }
-.workspace-work-heading p { margin-top: 5px; color: var(--muted); font-size: 12px; }
-.workspace-work-heading .tag { flex-shrink: 0; }
-.workspace-tabs { display: flex; align-items: stretch; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 23px; }
-.workspace-tabs button { position: relative; min-height: 41px; padding: 8px 0 13px; color: #6b7481; font-size: 13px; }
-.workspace-tabs button:hover { color: var(--ink); }
-.workspace-tabs button.is-active { color: var(--ink); font-weight: 600; }
-.workspace-tabs button.is-active::after { content: ""; position: absolute; height: 2px; bottom: -1px; inset-inline: 0; background: var(--blue); border-radius: 2px; }
-.workspace-content { min-width: 0; padding-bottom: 24px; }
-.workspace-content > .page-header { margin-bottom: 23px; align-items: flex-start; }
-.workspace-content > .page-header h1 { font-size: 20px; }
-.workspace-content > .page-header p { font-size: 12px; }
-.workspace-content > .page-header .page-actions { flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-.workspace-content .profile-layout,
-.workspace-content .policy-detail-grid,
-.workspace-content .mat-editor-layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-.workspace-content .policy-list { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-.workspace-content .policy-card { padding: 22px; }
-.workspace-content .policy-card h2 { font-size: 17px; }
-.workspace-content .policy-side { padding: 20px; }
-.workspace-content .policy-side .mock-score { flex-wrap: nowrap; align-items: center; }
-.workspace-content .policy-side .button { width: auto; }
-.workspace-content .policy-side > .text-button { display: inline-flex; margin-left: 14px; }
-.workspace-content .source-row { align-items: flex-start; }
-.workspace-content .source-row > div { flex-wrap: wrap; }
-.workspace-content .source-row .text-button { white-space: nowrap; flex-shrink: 0; }
-.workspace-content .diagnosis-overview { grid-template-columns: minmax(0, 1fr); padding: 22px; gap: 18px; margin-bottom: 28px; }
-.workspace-content .diagnosis-overview .content-panel + .content-panel { padding: 18px 0 0; border-left: 0; border-top: 1px solid #dfe4ec; }
-.workspace-content .diagnosis-overview h2 { font-size: 21px; }
-.workspace-content .requirement-row { align-items: flex-start; flex-direction: column; gap: 11px; padding-block: 20px; }
-.workspace-content .requirement-actions { align-self: flex-end; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
-.workspace-content .requirement-heading { flex-wrap: wrap; gap: 8px; }
-.workspace-content .next-suggestion { padding: 22px; }
-.workspace-content .mat-page { padding-bottom: 10px; }
-.workspace-content .mat-header { flex-direction: column; gap: 12px; margin-bottom: 22px; }
-.workspace-content .mat-header h1 { font-size: 20px; }
-.workspace-content .mat-subtitle { font-size: 12px; }
-.workspace-content .mat-header-actions { padding-top: 0; }
-.workspace-content .mat-chapter-nav { display:flex; position: static; flex-direction: row; overflow-x: auto; flex-wrap: nowrap; gap: 5px; padding: 0 0 5px; }
-.workspace-content .mat-chapter-nav > p,
-.workspace-content .mat-chapter-nav small { display: none; }
-.workspace-content .mat-chapter-nav button { flex-shrink: 0; background: #f3f5f8; white-space: nowrap; font-size: 11px; padding: 8px 10px; min-height: 36px; }
-.workspace-content .mat-editor-toolbar { align-items: flex-start; gap: 16px; margin-bottom: 22px; }
-.workspace-content .mat-editor { min-height: 190px; }
-.workspace-content .mat-gap-notice { margin-bottom: 23px; padding: 17px 19px; }
-.workspace-content .mat-confirmation { flex-wrap: wrap; gap: 17px; }
-.workspace-content .form-actions { flex-wrap: wrap; }
-.workspace-content .form-actions > .muted { max-width: 42ch; }
-.workspace-content .source-editor { min-height: 280px; }
-.workspace-content .empty-state { padding: 36px 22px; }
+/* 对话只有中间消息区域滚动，身份栏和输入栏位置固定。 */
+.in-project .workspace-panel > .adviser-card { display: flex; flex-direction: column; flex: 1 1 0; height: 100%; min-height: 0; min-width: 0; padding: 0; background: #fff; border-radius: 0; overflow: hidden; }
+.in-project .adviser-card > header { display: flex; align-items: center; flex: 0 0 auto; gap: 10px; min-height: 65px; margin: 0; padding: 13px 18px; border-bottom: 1px solid #edf0f4; }
+.in-project .adviser-card > header > div:not(.workspace-tabs) { display: grid; gap: 2px; min-width: 0; }
+.in-project .adviser-card > header .workspace-tabs { display: flex; margin-left: auto; }
+.in-project .adviser-card h2 { font-size: 14px; line-height: 1.5; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.in-project .adviser-card > header .muted { font-size: 11px; line-height: 1.6; }
+.in-project .chat-header-identity { flex: 1 1 0; }
+.in-project .chat-expert-meta { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+.in-project .chat-expert-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-project .chat-expert-status { font-size: 10px; line-height: 1.6; color: #7d8a9d; white-space: nowrap; }
+.in-project .chat-expert-avatar { display: block; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; background-position: var(--portrait-x) var(--portrait-y); }
+.in-project .chat-scroll-region { flex: 1 1 0; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 19px 18px 8px; }
+.in-project .adviser-card .chat-messages { display: flex; flex-direction: column; align-items: stretch; gap: 18px; max-height: none; min-height: 0; height: auto; overflow: visible; padding: 0; }
+.in-project .chat-message-row { display: flex; align-items: flex-start; align-self: flex-start; gap: 9px; width: min(92%, 780px); min-width: 0; }
+.in-project .chat-message-row.is-user { align-self: flex-end; flex-direction: row-reverse; }
+.in-project .chat-message-avatar { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; color: #677b93; background: #e5ecf5; overflow: hidden; }
+.in-project .chat-message-avatar .icon { width: 15px; height: 15px; }
+.in-project .chat-message-avatar.portrait,
+.in-project .chat-message-avatar.chat-persona-avatar,
+.in-project .chat-message-expert-avatar { background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; background-position: var(--portrait-x) var(--portrait-y); }
+.in-project .chat-message-user-avatar { font-size: 11px; font-weight: 500; color: #5b7598; }
+.in-project .chat-message-body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; max-width: calc(100% - 37px); }
+.in-project .is-user .chat-message-body { align-items: flex-end; }
+.in-project .chat-message-name { display: block; color: #7b8795; font-size: 10px; line-height: 1.6; margin: 0 2px 5px; }
+.in-project .adviser-card .chat-message { width: fit-content; max-width: 100%; margin: 0; padding: 11px 14px; font-size: 13px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; color: #445267; border-radius: 3px 10px 10px; background: #f3f5f8; }
+.in-project .adviser-card .chat-user { align-self: auto; color: #294574; background: #e7effc; border-radius: 10px 3px 10px 10px; }
+.in-project .adviser-card .chat-context { margin: 0; }
+.in-project .chat-work-action { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 17px; margin: 20px 0 16px; border-radius: 9px; background: #f3f6fb; }
+.in-project .chat-work-action > div { min-width: 0; }
+.in-project .chat-work-action strong { font-size: 12px; font-weight: 600; }
+.in-project .chat-work-action p { color: #6b788a; font-size: 12px; line-height: 1.8; margin-top: 4px; }
+.in-project .chat-work-action .button { flex-shrink: 0; font-size: 12px; }
+.in-project .chat-project-history { margin: 15px 0; }
+.in-project .chat-project-history > summary { width: fit-content; padding: 7px 0; font-size: 11px; color: #758294; cursor: pointer; }
+.in-project .chat-project-history > summary span { color: #8c96a5; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.in-project .adviser-card .chat-project-history .chat-messages { min-height: 0; max-height: none; margin-top: 10px; padding: 12px 0 2px 13px; border-left: 2px solid #e7ecf3; }
+.in-project .chat-composer { flex: 0 0 auto; min-width: 0; background: #fff; border-top: 1px solid #edf0f4; padding: 10px 16px 14px; }
+.in-project .chat-composer .chat-suggestions { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; margin: 0 0 8px; padding: 0 0 2px; max-height: 34px; overflow-x: auto; overflow-y: hidden; }
+.in-project .chat-suggestions > button { flex: 0 0 auto; min-height: 30px; padding: 5px 9px; color: #5f7390; background: #f4f6f9; border-radius: 6px; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.in-project .chat-suggestions > button:hover { color: #265aa5; background: #eaf0fa; }
+.in-project #adviser-chat-form { display: flex; align-items: flex-end; gap: 10px; min-width: 0; margin: 0; padding: 9px 11px; border: 1px solid #dce3ed; border-radius: 10px; background: #fff; }
+.in-project #adviser-chat-form:focus-within { border-color: #88a9df; box-shadow: 0 0 0 2px #edf3fe; }
+.in-project #adviser-message { display: block; flex: 1 1 0; width: 0; height: 56px; min-height: 56px; max-height: 56px; padding: 4px 2px; border: 0; outline: 0; resize: none; overflow-x: hidden; overflow-y: auto; background: transparent; color: var(--ink); font-size: 13px; line-height: 24px; }
+.in-project #adviser-message:focus-visible { outline: none; }
+.in-project .chat-send { flex: 0 0 34px; width: 34px; height: 34px; min-height: 34px; margin-bottom: 2px; border-radius: 8px; }
 
-.workspace-context { min-width: 0; position: sticky; top: 28px; padding-left: 24px; border-left: 1px solid var(--line); }
-.workspace-context-details { min-width: 0; }
-.workspace-context-details > summary { display: none; }
-.workspace-context h2 { font-size: 14px; margin-bottom: 17px; }
-.workspace-context h3 { font-size: 13px; margin-bottom: 12px; }
-.workspace-summary { margin-bottom: 25px; }
-.workspace-summary dl { display: grid; gap: 13px; margin: 0; }
-.workspace-summary dl > div { display: grid; grid-template-columns: 65px minmax(0, 1fr); gap: 13px; align-items: baseline; font-size: 12px; line-height: 1.8; }
-.workspace-summary dt { color: var(--muted); }
-.workspace-summary dd { margin: 0; overflow-wrap: anywhere; }
-.workspace-summary .tag { white-space: normal; }
-.workspace-result { padding-top: 22px; border-top: 1px solid var(--line); }
-.workspace-result > p { color: #5c6879; font-size: 12px; line-height: 1.9; margin: 10px 0; overflow-wrap: anywhere; }
-.workspace-result + .workspace-result { margin-top: 23px; }
-.workspace-result .text-button { justify-content: flex-start; font-size: 12px; white-space: normal; text-align: left; }
-.workspace-result .button { width: 100%; margin-top: 7px; }
-.workspace-source-list,
-.workspace-version-list { display: grid; gap: 0; list-style: none; margin: 0; padding: 0; }
-.workspace-source-list > li,
-.workspace-version-list > li { min-width: 0; padding: 10px 0; border-top: 1px solid #edf0f4; }
-.workspace-source-list > li:first-child,
-.workspace-version-list > li:first-child { border-top: 0; padding-top: 0; }
-.workspace-source-list button,
-.workspace-version-list button { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 0; font-size: 12px; text-align: left; line-height: 1.7; overflow-wrap: anywhere; }
-.workspace-source-list button:hover,
-.workspace-version-list button:hover { color: var(--blue); }
-.workspace-source-list .icon,
-.workspace-version-list .icon { width: 15px; height: 15px; margin-top: 3px; color: #6c7d93; }
-.workspace-source-list small,
-.workspace-version-list small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
-.workspace-source-list .tag { margin-left: auto; font-size: 10px; flex-shrink: 0; }
-.workspace-source-list > p,
-.workspace-version-list > p { font-size: 12px; color: var(--muted); }
-.workspace-source-list,.workspace-version-list { margin-top:25px; padding-top:22px; border-top:1px solid var(--line); }
-.workspace-source-list h2,.workspace-version-list h2 { grid-column:1/-1; }
-.workspace-source-list > button,.workspace-version-list > button { padding:10px 0; border-top:1px solid #edf0f4; }
-.workspace-source-list > button > span { flex:1; min-width:0; }
-.workspace-source-list > button > svg:last-child { margin-left:auto; flex-shrink:0; }
-.workspace-result ul { padding-left:17px; font-size:12px; line-height:1.9; color:var(--muted); }
-.workspace-result .text-button { display:flex; margin-top:12px; }
-.workspace-tabs { margin-bottom:0; }
-.workspace-document-heading { margin-bottom:22px; }
-.workspace-document-heading h2 { font-size:20px; }
-.workspace-document-heading .page-actions:empty { display:none; }
-.in-project #main-content { max-width:1740px; padding-inline:clamp(24px,3vw,48px); }
-.recent-project.is-active { color:var(--blue); font-weight:600; }
+/* 工作内容沿用编辑器，正文在面板内滚动，控件始终可以到达。 */
+.in-project .workspace-work-heading { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 18px; min-height: 64px; padding: 13px 18px; margin: 0; border-bottom: 1px solid #edf0f4; }
+.in-project .workspace-work-heading h2 { font-size: 15px; line-height: 1.5; }
+.in-project .workspace-work-heading p,
+.in-project .workspace-work-heading .muted { color: var(--muted); font-size: 11px; line-height: 1.7; }
+.in-project .workspace-work-heading .tag { flex-shrink: 0; }
+.in-project .workspace-content { flex: 1 1 0; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 22px 20px 28px; }
+.in-project .workspace-content > .page-header { align-items: flex-start; margin-bottom: 22px; }
+.in-project .workspace-content > .page-header h1,
+.in-project .workspace-document-heading h2 { font-size: 19px; line-height: 1.55; }
+.in-project .workspace-content > .page-header p { font-size: 12px; }
+.in-project .workspace-content .page-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.in-project .workspace-document-heading { margin-bottom: 20px; }
+.in-project .workspace-document-heading .page-actions:empty { display: none; }
+.in-project .workspace-content .profile-layout,
+.in-project .workspace-content .policy-detail-grid,
+.in-project .workspace-content .mat-editor-layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.in-project .workspace-content .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.in-project .workspace-content .form-actions { flex-wrap: wrap; gap: 13px; }
+.in-project .workspace-content .form-actions > .muted { max-width: 42ch; }
+.in-project .workspace-content .source-row { align-items: flex-start; }
+.in-project .workspace-content .source-row > div { flex-wrap: wrap; }
+.in-project .workspace-content .source-row .text-button { flex-shrink: 0; white-space: nowrap; }
+.in-project .workspace-content .policy-list { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.in-project .workspace-content .policy-card { padding: 21px; }
+.in-project .workspace-content .policy-card h2 { font-size: 17px; }
+.in-project .workspace-content .policy-side { padding: 20px; }
+.in-project .workspace-content .policy-side .mock-score { flex-wrap: nowrap; align-items: center; }
+.in-project .workspace-content .policy-side .button { width: auto; }
+.in-project .workspace-content .policy-side > .text-button { display: inline-flex; margin-left: 14px; }
+.in-project .workspace-content .diagnosis-overview { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px; margin-bottom: 28px; }
+.in-project .workspace-content .diagnosis-overview .content-panel + .content-panel { padding: 18px 0 0; border-left: 0; border-top: 1px solid #dfe4ec; }
+.in-project .workspace-content .diagnosis-overview h2 { font-size: 21px; }
+.in-project .workspace-content .requirement-row { flex-direction: column; align-items: flex-start; gap: 10px; padding-block: 19px; }
+.in-project .workspace-content .requirement-actions { flex-wrap: wrap; align-self: flex-end; justify-content: flex-end; gap: 12px; }
+.in-project .workspace-content .requirement-heading { flex-wrap: wrap; gap: 8px; }
+.in-project .workspace-content .next-suggestion { padding: 21px; }
+.in-project .workspace-content .mat-page { padding-bottom: 4px; }
+.in-project .workspace-content .mat-header { flex-direction: column; gap: 12px; margin-bottom: 22px; }
+.in-project .workspace-content .mat-header h1 { font-size: 20px; }
+.in-project .workspace-content .mat-subtitle { font-size: 12px; }
+.in-project .workspace-content .mat-header-actions { padding-top: 0; }
+.in-project .workspace-content .mat-chapter-nav { position: static; display: flex; flex-direction: row; flex-wrap: nowrap; gap: 5px; overflow-x: auto; padding: 0 0 5px; }
+.in-project .workspace-content .mat-chapter-nav > p,
+.in-project .workspace-content .mat-chapter-nav small { display: none; }
+.in-project .workspace-content .mat-chapter-nav button { flex-shrink: 0; white-space: nowrap; min-height: 36px; padding: 8px 10px; font-size: 11px; background: #f3f5f8; }
+.in-project .workspace-content .mat-editor-toolbar { align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+.in-project .workspace-content .mat-editor { min-height: 190px; }
+.in-project .workspace-content .mat-gap-notice { padding: 17px 19px; margin-bottom: 22px; }
+.in-project .workspace-content .mat-confirmation { flex-wrap: wrap; gap: 17px; }
+.in-project .workspace-content .source-editor { min-height: 260px; }
+.in-project .workspace-content .empty-state { padding: 36px 22px; }
 
-/* 对话区只保留一层容器；实际操作集中在当前工作卡。 */
-.workspace-main .adviser-card { padding: 0; border-radius: 0; background: #fff; }
-.workspace-main .adviser-card > header { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #edf0f4; }
-.workspace-main .adviser-card > header > div { display: grid; gap: 2px; }
-.workspace-main .adviser-card h2 { font-size: 15px; }
-.workspace-main .adviser-card > header .muted { font-size: 11px; }
-.chat-expert-avatar { width: 42px; height: 42px; background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; }
-.workspace-main .chat-messages { max-height: 470px; min-height: 170px; gap: 22px; padding: 2px 3px 22px; }
-.workspace-main .chat-message { max-width: 94%; font-size: 13px; line-height: 2; }
-.workspace-main .chat-assistant { color: #414f62; }
-.workspace-main .chat-user { background: #edf2fb; color: #294574; padding: 10px 15px; border-radius: 12px 12px 3px 12px; }
-.workspace-main .chat-context { margin-bottom: 0; }
-.chat-work-action { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 19px 21px; border-radius: 11px; background: #f3f6fb; margin: 0 0 23px; }
-.chat-work-action > div { min-width: 0; }
-.chat-work-action strong { font-size: 13px; font-weight: 600; }
-.chat-work-action p { margin-top: 5px; font-size: 12px; line-height: 1.8; }
-.chat-work-action .button { flex-shrink: 0; }
-.chat-project-history { margin: 0 0 22px; }
-.chat-project-history > summary { padding: 8px 0; color: #6b7685; cursor: pointer; width: fit-content; font-size: 11px; }
-.chat-project-history > summary span { margin-left: 7px; color: #8490a0; font-variant-numeric: tabular-nums; }
-.workspace-main .chat-project-history .chat-messages { margin-top: 10px; padding: 14px 15px; border-left: 2px solid #e7ecf3; min-height: 0; max-height: 260px; }
-.workspace-main .chat-project-history .chat-message { font-size: 12px; }
-.workspace-main .chat-suggestions { gap: 8px; margin: 0 0 15px; }
-.workspace-main .chat-suggestions > button { background: #f4f6f9; color: #55677f; padding: 8px 11px; border-radius: 7px; font-size: 11px; }
-.workspace-main .chat-suggestions > button:hover { background: #eaf0fa; color: #265aa5; }
-.workspace-main #adviser-chat-form { padding: 13px 14px; border: 1px solid #dce3ed; border-radius: 12px; }
-.workspace-main #adviser-chat-form:focus-within { border-color: #8baee9; box-shadow: 0 0 0 2px #edf3fe; }
-.workspace-main #adviser-message { min-height: 70px; }
-.workspace-main #adviser-message:focus-visible { outline: none; }
-.workspace-main .chat-send { width: 35px; height: 35px; }
+/* 右侧自上而下：项目进度、摘要、工作成果、原始资料和材料版本。 */
+.in-project .workspace-context { display: block; position: static; min-width: 0; min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 5px 6px 22px 23px; border-left: 1px solid #e5e9ef; }
+.in-project .project-progress { display: grid; grid-template-columns: 1fr auto; row-gap: 8px; column-gap: 16px; width: 100%; margin: 0 0 25px; padding: 0; font-variant-numeric: tabular-nums; }
+.in-project .project-progress > div { display: flex; align-items: center; justify-content: space-between; gap: 15px; grid-column: 1 / -1; }
+.in-project .project-progress > div > span,
+.in-project .project-progress > span { font-size: 12px; color: #6b7889; }
+.in-project .project-progress strong { color: #2e4566; font-size: 23px; line-height: 1.3; font-weight: 600; }
+.in-project .project-progress strong small { margin-left: 2px; font-size: 12px; }
+.in-project .project-progress progress { grid-column: 1 / -1; height: 5px; margin: 0; }
+.in-project .project-progress progress::-webkit-progress-value { background: #6588be; }
+.in-project .project-progress progress::-moz-progress-bar { background: #6588be; }
+.in-project .project-progress > small { grid-column: 1 / -1; font-size: 11px; color: #798596; }
+.in-project .workspace-context-details { min-width: 0; }
+.in-project .workspace-context-details > summary { display: none; }
+.in-project .workspace-context h2 { margin: 0 0 15px; font-size: 13px; line-height: 1.6; }
+.in-project .workspace-context h3 { margin: 0 0 10px; font-size: 12px; }
+.in-project .workspace-summary { margin-bottom: 23px; }
+.in-project .workspace-summary dl { display: grid; gap: 13px; margin: 0; }
+.in-project .workspace-summary dl > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: baseline; font-size: 12px; line-height: 1.8; }
+.in-project .workspace-summary dt { color: #7a8595; }
+.in-project .workspace-summary dd { min-width: 0; margin: 0; color: #4e5b6f; overflow-wrap: anywhere; }
+.in-project .workspace-summary .tag { white-space: normal; }
+.in-project .workspace-result { padding-top: 21px; border-top: 1px solid #e8edf3; }
+.in-project .workspace-result > p { margin: 9px 0; font-size: 12px; line-height: 1.9; color: #5c6879; overflow-wrap: anywhere; }
+.in-project .workspace-result ul { margin: 10px 0; padding-left: 17px; color: var(--muted); font-size: 12px; line-height: 1.9; }
+.in-project .workspace-result .text-button { display: flex; justify-content: flex-start; white-space: normal; text-align: left; margin-top: 10px; font-size: 12px; }
+.in-project .workspace-result .button { width: 100%; margin-top: 7px; }
+.in-project .workspace-context-details > div > .workspace-result { margin-top: 22px; }
+.in-project .workspace-source-list,
+.in-project .workspace-version-list { display: grid; gap: 0; min-width: 0; margin: 23px 0 0; padding: 21px 0 0; border-top: 1px solid #e8edf3; list-style: none; }
+.in-project .workspace-source-list h2,
+.in-project .workspace-version-list h2 { grid-column: 1 / -1; }
+.in-project .workspace-source-list > button,
+.in-project .workspace-version-list > button,
+.in-project .workspace-source-list > li,
+.in-project .workspace-version-list > li { min-width: 0; padding: 10px 0; border-top: 1px solid #edf0f4; }
+.in-project .workspace-source-list button,
+.in-project .workspace-version-list button { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.in-project .workspace-source-list button:hover,
+.in-project .workspace-version-list button:hover { color: var(--blue); }
+.in-project .workspace-source-list > button > span { flex: 1; min-width: 0; }
+.in-project .workspace-source-list .icon,
+.in-project .workspace-version-list .icon { flex-shrink: 0; width: 15px; height: 15px; color: #7b8ba1; margin-top: 3px; }
+.in-project .workspace-source-list > button > svg:last-child { margin-left: auto; }
+.in-project .workspace-source-list small,
+.in-project .workspace-version-list small { display: block; color: #8b95a3; font-size: 10px; margin-top: 3px; }
+.in-project .workspace-source-list .tag { margin-left: auto; font-size: 10px; flex-shrink: 0; }
+.in-project .workspace-source-list > p,
+.in-project .workspace-version-list > p { color: var(--muted); font-size: 12px; }
+.in-project .recent-project.is-active { color: var(--blue); font-weight: 600; }
+
+@media (max-width: 1370px) {
+  .in-project .workspace-body { gap: 20px; }
+  .in-project .workspace-status-grid { grid-template-columns: repeat(5, minmax(126px, 1fr)); }
+  .in-project .workspace-context { padding-left: 20px; }
+}
+@media (max-width: 1100px) {
+  .in-project #main-content { padding: 18px 20px; }
+  .in-project .workspace-body { grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; }
+  .in-project .workspace-context { padding-left: 18px; }
+  .in-project .workspace-status-grid { grid-template-columns: repeat(5, 128px); gap: 7px; }
+  .in-project .adviser-card > header { padding-inline: 15px; }
+  .in-project .chat-scroll-region { padding-inline: 15px; }
+  .in-project .workspace-content { padding-inline: 17px; }
+}
+@media (max-width: 1000px) and (min-width: 901px) {
+  .in-project #main-content { padding-inline: 16px; }
+  .in-project .workspace-body { grid-template-columns: minmax(0, 1fr) 240px; gap: 15px; }
+  .in-project .workspace-context { padding-left: 15px; }
+}
+@media (max-width: 900px) {
+  .in-project #main-content { padding: 16px; }
+  .in-project .workspace-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 14px; }
+  .in-project .workspace-context { height: clamp(104px, 22dvh, 170px); max-height: none; padding: 11px 3px 8px; border-left: 0; border-top: 1px solid #e5e9ef; }
+  .in-project .project-progress { margin-bottom: 12px; row-gap: 5px; }
+  .in-project .project-progress strong { font-size: 19px; }
+  .in-project .workspace-context-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 38px; color: #50617a; font-size: 12px; font-weight: 500; cursor: pointer; list-style: none; }
+  .in-project .workspace-context-details > summary::-webkit-details-marker { display: none; }
+  .in-project .workspace-context-details > summary .icon { width: 15px; height: 15px; transform: rotate(90deg); }
+  .in-project .workspace-context-details[open] > summary .icon { transform: rotate(-90deg); }
+  .in-project .workspace-context-details > div { padding-top: 10px; }
+  .in-project .workspace-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+  .in-project .workspace-source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .in-project .workspace-tabs { gap: 16px; }
+  .in-project .workspace-work-heading { gap: 12px; }
+  .in-project .workspace-content .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .in-project .mobile-header { height: 52px; min-height: 52px; padding-inline: 12px; font-size: 14px; }
+  .in-project #main-content { height: calc(100% - 52px); padding: 10px 12px 12px; }
+  .in-project .workspace-body { gap: 11px; }
+  .in-project .project-workspace-header { min-height: 43px; margin-bottom: 10px; }
+  .in-project .project-heading { gap: 7px; }
+  .in-project .project-heading > .icon-button { width: 28px; height: 28px; min-height: 28px; flex-basis: 28px; }
+  .in-project .project-heading h1 { font-size: 18px; }
+  .in-project .project-heading > div > p { font-size: 10px; margin-top: 2px; }
+  .in-project .workspace-status-grid { grid-template-columns: repeat(5, 130px); grid-auto-rows: 82px; padding: 8px 8px 10px; }
+  .in-project .work-status-card { height: 82px; padding: 9px; }
+  .in-project .work-status-top { font-size: 10px; margin-bottom: 7px; }
+  .in-project .work-expert-identity h2 { font-size: 12px; }
+  .in-project .adviser-card > header { min-height: 58px; gap: 8px; padding: 11px 12px; }
+  .in-project .adviser-card h2 { font-size: 13px; }
+  .in-project .adviser-card > header .muted { font-size: 10px; }
+  .in-project .chat-expert-avatar { width: 28px; height: 28px; flex-basis: 28px; }
+  .in-project .workspace-tabs { gap: 12px; }
+  .in-project .workspace-tabs button { font-size: 11px; min-height: 32px; }
+  .in-project .chat-scroll-region { padding: 15px 11px 7px; }
+  .in-project .chat-message-row { width: 96%; gap: 8px; }
+  .in-project .chat-message-body { max-width: calc(100% - 36px); }
+  .in-project .adviser-card .chat-message { padding: 10px 12px; font-size: 13px; line-height: 1.85; }
+  .in-project .chat-message-name { font-size: 10px; }
+  .in-project .chat-work-action { flex-direction: column; align-items: flex-start; gap: 13px; padding: 14px 15px; }
+  .in-project .chat-work-action .button { align-self: flex-end; }
+  .in-project .chat-composer { padding: 8px 10px 10px; }
+  .in-project #adviser-chat-form { padding: 8px 9px; }
+  .in-project #adviser-message { font-size: 16px; }
+  .in-project .workspace-work-heading { min-height: 58px; padding: 11px 12px; }
+  .in-project .workspace-work-heading h2 { font-size: 14px; }
+  .in-project .workspace-content { padding: 18px 13px 25px; }
+  .in-project .workspace-content > .page-header { flex-direction: column; gap: 12px; }
+  .in-project .workspace-content > .page-header h1,
+  .in-project .workspace-document-heading h2 { font-size: 18px; }
+  .in-project .workspace-content .mat-editor-toolbar { flex-direction: column; }
+  .in-project .workspace-content .mat-editor,
+  .in-project .workspace-content .mat-save-section input { font-size: 16px; }
+  .in-project .workspace-content .policy-side .mock-score { flex-wrap: wrap; }
+  .in-project .workspace-content .policy-side > .text-button { display: flex; margin-left: 0; margin-top: 10px; }
+  .in-project .workspace-summary dl,
+  .in-project .workspace-source-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-height: 640px) {
+  .in-project #main-content { padding-block: 12px; }
+  .in-project .project-workspace-header { min-height: 40px; margin-bottom: 8px; }
+  .in-project .project-heading h1 { font-size: 18px; }
+  .in-project .project-heading > div > p { font-size: 10px; margin-top: 1px; }
+  .in-project .workspace-status-grid { grid-auto-rows: 80px; padding-block: 8px; }
+  .in-project .work-status-card { height: 80px; padding-block: 8px; }
+  .in-project .work-status-top { margin-bottom: 6px; }
+  .in-project .adviser-card > header,
+  .in-project .workspace-work-heading { min-height: 51px; padding-block: 8px; }
+  .in-project .chat-scroll-region { padding-block: 12px 4px; }
+  .in-project .chat-composer { padding-block: 8px 10px; }
+  .in-project #adviser-message { height: 48px; min-height: 48px; max-height: 48px; line-height: 20px; }
+}
+@media (max-height: 560px) {
+  .in-project .chat-composer .chat-suggestions { display: none; }
+  .in-project .workspace-context { padding-top: 5px; }
+}
+/* 极矮窗口保留可滚动的最小工作区，输入框不被外层裁掉。 */
+@media (max-height: 480px) {
+  .in-project { overflow-y: auto; }
+  .in-project .main-shell { height: 480px; min-height: 100dvh; overflow: visible; }
+}
+@media (max-width: 900px) and (max-height: 640px) {
+  .in-project .workspace-context { height: 104px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .in-project .work-status-card { transition: none; }
+  .in-project .workspace-status-grid { scroll-behavior: auto; }
+}
 
 /* 工作台：项目在前，专家作为补充入口。 */
 .dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin: 4px 0 24px; }
@@ -214,55 +347,10 @@
 .dashboard-expert-card > .icon { margin-left: auto; width: 16px; height: 16px; color: #8190a4; }
 
 @media (max-width: 1370px) {
-  .workspace-body { grid-template-columns: minmax(0, 1fr) 250px; gap: 25px; }
-  .workspace-context { padding-left: 21px; }
-  .work-status-card { padding-inline: 13px; }
-  .work-status-top { gap: 5px; }
   .dashboard-projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-help-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 1100px) {
-  .workspace-body { grid-template-columns: minmax(0, 1fr); gap: 30px; }
-  .workspace-context { position: static; border-left: 0; border-top: 1px solid var(--line); padding: 0; }
-  .workspace-context-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 51px; cursor: pointer; font-size: 13px; font-weight: 500; list-style: none; }
-  .workspace-context-details > summary::-webkit-details-marker { display: none; }
-  .workspace-context-details > summary::after { content: "+"; font-size: 19px; color: #6d7b8e; font-weight: 400; }
-  .workspace-context-details[open] > summary::after { content: "−"; }
-  .workspace-summary { padding-top: 9px; }
-  .workspace-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 26px; }
-  .workspace-result { margin-top: 22px; }
-  .workspace-source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 25px; }
-  .workspace-status-grid { gap: 9px; overflow-x: auto; grid-template-columns: repeat(5, minmax(154px, 1fr)); padding: 0 0 9px; margin-bottom: 24px; scroll-snap-type: x proximity; }
-  .work-status-card { scroll-snap-align: start; }
-  .workspace-main .chat-messages { max-height: 480px; }
-}
 @media (max-width: 760px) {
-  .project-workspace-header { flex-direction: column; gap: 19px; margin-bottom: 23px; }
-  .project-heading h1 { font-size: 23px; }
-  .project-progress { width: min(100%, 330px); flex: none; grid-template-columns: 1fr auto; column-gap: 15px; padding-top: 0; }
-  .project-progress strong { font-size: 16px; }
-  .workspace-status-grid { margin-right: -3px; grid-template-columns: repeat(5, 165px); }
-  .work-status-card { padding: 15px; }
-  .work-status-card > p:not(.work-owner) { min-height: 3.6em; }
-  .workspace-work-heading { align-items: flex-start; gap: 12px; }
-  .workspace-work-heading h2 { font-size: 17px; }
-  .workspace-tabs { margin-bottom: 20px; }
-  .workspace-main .chat-message { max-width: 98%; }
-  .workspace-main .chat-messages { min-height: 145px; }
-  .chat-work-action { align-items: flex-start; flex-direction: column; gap: 15px; padding: 17px 18px; }
-  .chat-work-action .button { min-height: 40px; align-self: flex-end; }
-  .workspace-main .chat-suggestions > button { min-height: 38px; font-size: 12px; }
-  .workspace-main #adviser-message { font-size: 16px; }
-  .workspace-content > .page-header { flex-direction: column; gap: 13px; }
-  .workspace-content > .page-header h1 { font-size: 19px; }
-  .workspace-content .form-grid { grid-template-columns: minmax(0, 1fr); }
-  .workspace-content .mat-editor-toolbar { flex-direction: column; }
-  .workspace-content .mat-editor,
-  .workspace-content .mat-save-section input { font-size: 16px; }
-  .workspace-content .policy-side .mock-score { flex-wrap: wrap; }
-  .workspace-content .policy-side > .text-button { margin-left: 0; margin-top: 11px; display: flex; }
-  .workspace-summary dl,
-  .workspace-source-list { grid-template-columns: minmax(0, 1fr); }
   .dashboard-toolbar { align-items: flex-start; gap: 16px; flex-wrap: wrap; }
   .dashboard-tabs { gap: 21px; }
   .dashboard-tab { font-size: 13px; gap: 6px; }
@@ -282,31 +370,6 @@
   .dashboard-expert-card > .icon { margin-top: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .work-status-card,
   .dashboard-project-card,
   .dashboard-expert-card { transition: none; }
-  .workspace-status-grid { scroll-behavior: auto; scroll-snap-type: none; }
-}
-
-/* 专家身份是卡片主信息；工作事项与状态留在上方。 */
-.work-status-card .work-status-top > span:first-child,
-.work-status-card[data-status] .work-status-top > span:first-child {
-  display: inline;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: transparent;
-  color: #697585;
-  font-size: 11px;
-}
-.work-expert-identity { display: flex; align-items: center; gap: 10px; min-width: 0; margin: 2px 0 13px; }
-.work-expert-identity h2 { font-size: 14px; line-height: 1.6; margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.work-expert-avatar { display: block; flex: 0 0 37px; width: 37px; height: 37px; border-radius: 50%; background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; background-position: var(--expert-x) var(--expert-y); background-repeat: no-repeat; background-color: #e5ebf4; }
-.work-human-avatar { display: grid; place-items: center; flex: 0 0 37px; width: 37px; height: 37px; border-radius: 10px; background: #e7ebf1; color: #66758b; }
-.work-human-avatar .icon { width: 20px; height: 20px; }
-.work-status-card.is-selected .work-human-avatar { background: #dfe9fa; color: #285b9e; }
-@media (max-width: 1370px) {
-  .work-expert-identity { gap: 8px; }
-  .work-expert-identity h2 { font-size: 13px; }
-  .work-expert-avatar, .work-human-avatar { flex-basis: 33px; width: 33px; height: 33px; }
 }

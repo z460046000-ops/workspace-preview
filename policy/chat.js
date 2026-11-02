@@ -4,6 +4,7 @@
   const S = () => window.PolicyStore;
   const U = () => window.PolicyUI;
   const drafts = new Map();
+  const scrollPositions = new Map();
   const experts = {
     profile: { ...window.PolicyPersonas.get('profile'), subject: '企业档案', icon: 'building', prompts: ['企业档案还缺什么？', '哪些资料已经提供？'], placeholder: '补充企业情况，或问问档案还缺什么……' },
     match: { ...window.PolicyPersonas.get('match'), subject: '政策匹配', icon: 'search', prompts: ['为什么匹配这个政策？', '申报条件是什么？'], placeholder: '问问匹配原因、政策条件或适用范围……' },
@@ -99,7 +100,7 @@
     return actionFor(task, next);
   }
 
-  function render(taskId, requestedWork = 'general') {
+  function render(taskId, requestedWork = 'general', options = {}) {
     const task = S().getTask(taskId);
     if (!task) return '';
     const E = U().escape, I = U().icon;
@@ -108,16 +109,52 @@
     const action = actionFor(task, workId);
     const messages = (task.messages || []).filter(message => validWork(message.workId) === workId);
     const history = workId === 'general' ? [] : (task.messages || []).filter(message => validWork(message.workId) === 'general');
-    const messageHtml = message => `<p class="chat-message chat-${message.role}"><span class="sr-only">${message.role === 'user' ? '你：' : E(experts[validWork(message.workId)].name) + '：'}</span>${E(message.text)}</p>`;
+    const messageHtml = (message, context = false) => {
+      const isUser = message.role === 'user';
+      const author = experts[validWork(message.workId)];
+      const avatar = isUser
+        ? '<span class="chat-message-avatar chat-message-user-avatar" aria-hidden="true">企</span>'
+        : `<span class="chat-message-avatar chat-message-expert-avatar" aria-hidden="true" style="--portrait-x:${author.x}%;--portrait-y:${author.y}%"></span>`;
+      return `<div class="chat-message-row ${isUser ? 'is-user' : 'is-assistant'}">${avatar}<div class="chat-message-body"><span class="chat-message-name">${isUser ? '企业负责人' : E(author.name)}</span><p class="chat-message chat-${message.role}${context ? ' chat-context' : ''}">${E(message.text)}</p></div></div>`;
+    };
+    const tabsHTML = typeof options?.tabsHTML === 'string' ? options.tabsHTML : '';
+    const statusLabel = options?.statusLabel ? `<span class="chat-expert-status">${E(options.statusLabel)}</span>` : '';
     const attrs = `${action.route ? `data-route="${action.route}"` : `data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${workId}"${action.id ? ` data-id="${E(action.id)}"` : ''}`;
-    return `<section class="adviser-card" data-chat-work="${workId}" aria-label="${E(expert.name)}对话">
-      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div><h2>${E(expert.name)}</h2><span class="muted">${E(expert.subject)}</span></div></header>
-      <div class="chat-messages" aria-live="polite"><p class="chat-message chat-assistant chat-context">${E(answer(task, '', workId))}</p>${messages.map(messageHtml).join('')}</div>
-      <div class="chat-work-action"><div><strong>${E(action.label)}</strong><p class="muted">${E(action.detail)}</p></div><button class="button button-primary" ${attrs}>${E(action.label)} ${I('arrow')}</button></div>
-      ${history.length ? `<details class="chat-project-history"><summary>项目历史对话 <span>${history.length} 条</span></summary><div class="chat-messages">${history.map(messageHtml).join('')}</div></details>` : ''}
-      <div class="chat-suggestions">${expert.prompts.map(prompt => `<button data-action="chat-prompt" data-task="${E(task.id)}" data-work="${workId}" data-prompt="${E(prompt)}">${E(prompt.replace(/[？?]$/, ''))}</button>`).join('')}</div>
-      <form id="adviser-chat-form" data-task="${E(task.id)}" data-work="${workId}"><label class="sr-only" for="adviser-message">向${E(expert.name)}提问</label><textarea id="adviser-message" name="message" rows="2" maxlength="2000" required placeholder="${E(expert.placeholder)}">${E(drafts.get(keyFor(task.id, workId)) || '')}</textarea><button type="submit" class="icon-button chat-send" aria-label="发送问题">${I('arrow')}</button></form>
+    return `<section class="adviser-card" data-chat-task="${E(task.id)}" data-chat-work="${workId}" aria-label="${E(expert.name)}对话">
+      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-header-identity"><h2>${E(expert.name)}</h2><div class="chat-expert-meta"><span class="muted chat-expert-subject">${E(expert.subject)}</span>${statusLabel}</div></div>${tabsHTML}</header>
+      <div class="chat-scroll-region"><div class="chat-messages" aria-live="polite">${messageHtml({ role: 'assistant', text: answer(task, '', workId), workId }, true)}${messages.map(message => messageHtml(message)).join('')}</div>
+        <div class="chat-work-action"><div><strong>${E(action.label)}</strong><p class="muted">${E(action.detail)}</p></div><button class="button button-primary" ${attrs}>${E(action.label)} ${I('arrow')}</button></div>
+        ${history.length ? `<details class="chat-project-history"><summary>项目历史对话 <span>${history.length} 条</span></summary><div class="chat-messages">${history.map(message => messageHtml(message)).join('')}</div></details>` : ''}
+      </div>
+      <div class="chat-composer"><div class="chat-suggestions">${expert.prompts.map(prompt => `<button data-action="chat-prompt" data-task="${E(task.id)}" data-work="${workId}" data-prompt="${E(prompt)}">${E(prompt.replace(/[？?]$/, ''))}</button>`).join('')}</div>
+        <form id="adviser-chat-form" data-task="${E(task.id)}" data-work="${workId}"><label class="sr-only" for="adviser-message">向${E(expert.name)}提问</label><textarea id="adviser-message" name="message" rows="2" maxlength="2000" required placeholder="${E(expert.placeholder)}">${E(drafts.get(keyFor(task.id, workId)) || '')}</textarea><button type="submit" class="icon-button chat-send" aria-label="发送问题">${I('arrow')}</button></form>
+      </div>
     </section>`;
+  }
+
+  function captureView() {
+    const panel = document.querySelector('.adviser-card[data-chat-task]');
+    if (!panel) return false;
+    const key = keyFor(panel.dataset.chatTask, validWork(panel.dataset.chatWork));
+    const region = panel.querySelector(':scope > .chat-scroll-region');
+    const input = panel.querySelector('#adviser-message');
+    if (region) scrollPositions.set(key, region.scrollTop);
+    if (input) drafts.set(key, input.value.slice(0, 2000));
+    return true;
+  }
+
+  function restoreView({ followLatest = false } = {}) {
+    const panel = document.querySelector('.adviser-card[data-chat-task]');
+    if (!panel) return false;
+    const key = keyFor(panel.dataset.chatTask, validWork(panel.dataset.chatWork));
+    const region = panel.querySelector(':scope > .chat-scroll-region');
+    const input = panel.querySelector('#adviser-message');
+    if (input && drafts.has(key)) input.value = drafts.get(key);
+    if (region) {
+      region.scrollTop = followLatest || !scrollPositions.has(key) ? region.scrollHeight : scrollPositions.get(key);
+      scrollPositions.set(key, region.scrollTop);
+    }
+    return true;
   }
 
   function send(taskId, message, requestedWork = 'general') {
@@ -128,10 +165,11 @@
     const expertId = experts[workId].id;
     const saved = S().updateTask(task.id, { selectedWorkId: workId, messages: [...(task.messages || []), { role: 'user', text: value, workId, expertId }, { role: 'assistant', text: answer(task, value, workId), workId, expertId }] });
     if (!saved) { U().toast('对话未能保存，请重试。'); return; }
+    const input = document.querySelector('#adviser-message');
+    if (input?.closest('form')?.dataset.task === task.id && validWork(input.closest('form').dataset.work) === workId) input.value = '';
     drafts.delete(keyFor(task.id, workId));
     U().refresh();
-    const list = document.querySelector('.adviser-card > .chat-messages');
-    if (list) list.scrollTop = list.scrollHeight;
+    restoreView({ followLatest: true });
     document.querySelector('#adviser-message')?.focus({ preventScroll: true });
   }
   document.addEventListener('input', event => {
@@ -139,7 +177,7 @@
     const form = event.target.closest('form');
     if (form?.dataset.task) drafts.set(keyFor(form.dataset.task, validWork(form.dataset.work)), event.target.value.slice(0, 2000));
   });
-  window.PolicyChat = Object.freeze({ render,
+  window.PolicyChat = Object.freeze({ render, captureView, restoreView,
     handleClick(target) {
       if (target.dataset.action !== 'chat-prompt') return false;
       send(target.dataset.task, target.dataset.prompt, target.dataset.work);
