@@ -4,7 +4,7 @@
 .in-project #main-content { height: 100%; min-height: 0; max-width: none; padding: 20px 24px; }
 .in-project #page-content { height: 100%; min-height: 0; }
 .in-project .project-workspace { height: 100%; min-width: 0; min-height: 0; }
-.in-project .workspace-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0; align-items: stretch; }
+.in-project .workspace-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0; align-items: stretch; }
 .in-project .workspace-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
 .in-project .project-workspace-header { display: flex; align-items: center; flex: 0 0 auto; min-width: 0; min-height: 52px; gap: 16px; margin: 0 0 14px; }
 .in-project .project-heading { display: flex; align-items: center; min-width: 0; gap: 10px; }
@@ -16,7 +16,7 @@
 .in-project .workspace-conversation { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; border: 1px solid #e3e8ef; border-radius: 12px; background: #fff; overflow: hidden; }
 
 /* 专家卡与下方同一面板关联；卡片高度不随状态文案改变。 */
-.in-project .workspace-status-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: 86px; flex: 0 0 auto; gap: 8px; margin: 0; padding: 10px 10px 12px; min-width: 0; overflow-x: auto; scrollbar-width: thin; scroll-padding-inline: 10px; }
+.in-project .workspace-status-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: 86px; flex: 0 0 auto; gap: 8px; margin: 0; padding: 10px 10px 12px; min-width: 0; overflow-x: auto; scrollbar-width: none; scroll-padding-inline: 10px; }
 .in-project .work-status-card { display: flex; flex-direction: column; justify-content: center; min-width: 0; height: 86px; padding: 10px; text-align: left; border-radius: 8px; background: #f5f6f8; box-shadow: inset 0 0 0 1px transparent; transition: background .16s, box-shadow .16s; }
 .in-project .work-status-card:hover { background: #eef2f7; }
 .in-project .work-status-card.is-selected,
@@ -58,7 +58,7 @@
 .in-project .chat-expert-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .in-project .chat-expert-status { font-size: 10px; line-height: 1.6; color: #7d8a9d; white-space: nowrap; }
 .in-project .chat-expert-avatar { display: block; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background-image: url('assets/landing/policy-advisers.webp'); background-size: 300% 200%; background-position: var(--portrait-x) var(--portrait-y); }
-.in-project .chat-scroll-region { flex: 1 1 0; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 19px 18px 8px; }
+.in-project .chat-scroll-region { flex: 1 1 0; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: auto; padding: 19px 18px 8px; }
 .in-project .adviser-card .chat-messages { display: flex; flex-direction: column; align-items: stretch; gap: 18px; max-height: none; min-height: 0; height: auto; overflow: visible; padding: 0; }
 .in-project .chat-message-row { display: flex; align-items: flex-start; align-self: flex-start; gap: 9px; width: min(92%, 780px); min-width: 0; }
 .in-project .chat-message-row.is-user { align-self: flex-end; flex-direction: row-reverse; }
@@ -99,7 +99,7 @@
 .in-project .workspace-work-heading p,
 .in-project .workspace-work-heading .muted { color: var(--muted); font-size: 11px; line-height: 1.7; }
 .in-project .workspace-work-heading .tag { flex-shrink: 0; }
-.in-project .workspace-content { flex: 1 1 0; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 22px 20px 28px; }
+.in-project .workspace-content { flex: 1 1 0; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: auto; padding: 22px 20px 28px; }
 .in-project .workspace-content > .page-header { align-items: flex-start; margin-bottom: 22px; }
 .in-project .workspace-content > .page-header h1,
 .in-project .workspace-document-heading h2 { font-size: 19px; line-height: 1.55; }
@@ -146,66 +146,86 @@
 .in-project .workspace-content .source-editor { min-height: 260px; }
 .in-project .workspace-content .empty-state { padding: 36px 22px; }
 
-/* 右侧自上而下：项目进度、摘要、工作成果、原始资料和材料版本。 */
-.in-project .workspace-context { display: block; position: static; min-width: 0; min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 5px 6px 22px 23px; border-left: 1px solid #e5e9ef; }
-.in-project .project-progress { display: grid; grid-template-columns: 1fr auto; row-gap: 8px; column-gap: 16px; width: 100%; margin: 0 0 25px; padding: 0; font-variant-numeric: tabular-nums; }
-.in-project .project-progress > div { display: flex; align-items: center; justify-content: space-between; gap: 15px; grid-column: 1 / -1; }
-.in-project .project-progress > div > span,
-.in-project .project-progress > span { font-size: 12px; color: #6b7889; }
-.in-project .project-progress strong { color: #2e4566; font-size: 23px; line-height: 1.3; font-weight: 600; }
-.in-project .project-progress strong small { margin-left: 2px; font-size: 12px; }
-.in-project .project-progress progress { grid-column: 1 / -1; height: 5px; margin: 0; }
-.in-project .project-progress progress::-webkit-progress-value { background: #6588be; }
-.in-project .project-progress progress::-moz-progress-bar { background: #6588be; }
-.in-project .project-progress > small { grid-column: 1 / -1; font-size: 11px; color: #798596; }
-.in-project .workspace-context-details { min-width: 0; }
-.in-project .workspace-context-details > summary { display: none; }
-.in-project .workspace-context h2 { margin: 0 0 15px; font-size: 13px; line-height: 1.6; }
-.in-project .workspace-context h3 { margin: 0 0 10px; font-size: 12px; }
-.in-project .workspace-summary { margin-bottom: 23px; }
-.in-project .workspace-summary dl { display: grid; gap: 13px; margin: 0; }
-.in-project .workspace-summary dl > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: baseline; font-size: 12px; line-height: 1.8; }
-.in-project .workspace-summary dt { color: #7a8595; }
-.in-project .workspace-summary dd { min-width: 0; margin: 0; color: #4e5b6f; overflow-wrap: anywhere; }
-.in-project .workspace-summary .tag { white-space: normal; }
-.in-project .workspace-result { padding-top: 21px; border-top: 1px solid #e8edf3; }
-.in-project .workspace-result > p { margin: 9px 0; font-size: 12px; line-height: 1.9; color: #5c6879; overflow-wrap: anywhere; }
-.in-project .workspace-result ul { margin: 10px 0; padding-left: 17px; color: var(--muted); font-size: 12px; line-height: 1.9; }
-.in-project .workspace-result .text-button { display: flex; justify-content: flex-start; white-space: normal; text-align: left; margin-top: 10px; font-size: 12px; }
-.in-project .workspace-result .button { width: 100%; margin-top: 7px; }
-.in-project .workspace-context-details > div > .workspace-result { margin-top: 22px; }
-.in-project .workspace-source-list,
-.in-project .workspace-version-list { display: grid; gap: 0; min-width: 0; margin: 23px 0 0; padding: 21px 0 0; border-top: 1px solid #e8edf3; list-style: none; }
-.in-project .workspace-source-list h2,
-.in-project .workspace-version-list h2 { grid-column: 1 / -1; }
-.in-project .workspace-source-list > button,
-.in-project .workspace-version-list > button,
-.in-project .workspace-source-list > li,
-.in-project .workspace-version-list > li { min-width: 0; padding: 10px 0; border-top: 1px solid #edf0f4; }
-.in-project .workspace-source-list button,
-.in-project .workspace-version-list button { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
-.in-project .workspace-source-list button:hover,
-.in-project .workspace-version-list button:hover { color: var(--blue); }
-.in-project .workspace-source-list > button > span { flex: 1; min-width: 0; }
-.in-project .workspace-source-list .icon,
-.in-project .workspace-version-list .icon { flex-shrink: 0; width: 15px; height: 15px; color: #7b8ba1; margin-top: 3px; }
-.in-project .workspace-source-list > button > svg:last-child { margin-left: auto; }
-.in-project .workspace-source-list small,
-.in-project .workspace-version-list small { display: block; color: #8b95a3; font-size: 10px; margin-top: 3px; }
-.in-project .workspace-source-list .tag { margin-left: auto; font-size: 10px; flex-shrink: 0; }
-.in-project .workspace-source-list > p,
-.in-project .workspace-version-list > p { color: var(--muted); font-size: 12px; }
-.in-project .recent-project.is-active { color: var(--blue); font-weight: 600; }
+/* 右侧资料索引：三个信息模块；文件和版本使用同一卡片内的行。 */
+.in-project .workspace-context { display:block; position:static; min-width:0; min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; padding:14px; background:#f3f5f8; border:0; border-radius:14px; }
+.in-project .workspace-context-index { display:grid; gap:14px; }
+.in-project .context-card { min-width:0; margin:0; padding:18px; background:#fff; border:0; border-radius:12px; box-shadow:0 3px 14px #23365208; }
+.in-project .context-card h2 { margin:0 0 14px; font-size:14px; line-height:1.5; letter-spacing:-.01em; }
+.in-project .context-card h3 { font-size:12px; margin:0 0 10px; }
+.in-project .context-company { font-size:15px; font-weight:600; line-height:1.65; color:#26354a; margin:0 0 15px; overflow-wrap:anywhere; }
+.in-project .workspace-summary dl { display:grid; gap:11px; margin:0; }
+.in-project .workspace-summary dl>div { display:grid; grid-template-columns:56px minmax(0,1fr); align-items:baseline; gap:10px; font-size:12px; line-height:1.85; }
+.in-project .workspace-summary dt { color:#6c7888; }
+.in-project .workspace-summary dd { min-width:0; margin:0; color:#3f4e63; overflow-wrap:anywhere; }
+.in-project .project-progress { display:grid; grid-template-columns:1fr auto; row-gap:8px; column-gap:12px; width:100%; padding-top:16px; margin:18px 0 0; border-top:1px solid #edf0f4; font-variant-numeric:tabular-nums; }
+.in-project .project-progress>div { display:flex; align-items:center; justify-content:space-between; gap:12px; grid-column:1/-1; }
+.in-project .project-progress>div>span { color:#586a80; font-size:12px; }
+.in-project .project-progress strong { color:#253e64; font-size:26px; line-height:1.25; font-weight:600; letter-spacing:-.03em; }
+.in-project .project-progress strong small { margin-left:2px; font-size:12px; letter-spacing:0; }
+.in-project .project-progress progress { grid-column:1/-1; height:5px; margin:0; }
+.in-project .project-progress progress::-webkit-progress-value { background:#2464c6; }
+.in-project .project-progress progress::-moz-progress-bar { background:#2464c6; }
+.in-project .project-progress>small { grid-column:1/-1; font-size:11px; color:#66768b; }
+.in-project .workspace-result-heading { display:flex; gap:9px; align-items:center; margin-bottom:14px; }
+.in-project .workspace-result-heading>div { min-width:0; }
+.in-project .workspace-result-heading h2 { margin:0 0 3px; font-size:13px; }
+.in-project .workspace-result-heading p { font-size:11px; line-height:1.7; color:#68768a; }
+.in-project .context-expert-avatar { display:block; width:32px; height:32px; flex:0 0 32px; border-radius:50%; background-image:url('assets/landing/policy-advisers.webp'); background-size:300% 200%; background-position:var(--expert-x) var(--expert-y); background-color:#edf1f7; }
+.in-project .workspace-result-body>p { font-size:13px; line-height:1.9; color:#384b65; margin:0 0 12px; overflow-wrap:anywhere; }
+.in-project .workspace-result-body ul { padding-left:17px; font-size:12px; line-height:1.9; margin:0 0 16px; color:#576b85; }
+.in-project .workspace-result-body>.text-button { display:flex; align-items:center; justify-content:space-between; width:100%; text-align:left; white-space:normal; font-size:12px; line-height:1.6; min-height:40px; padding:9px 12px; border-radius:8px; color:#2459a8; background:#edf3fe; }
+.in-project .workspace-result-body>.text-button:hover { background:#e1ebfc; }
+.in-project .workspace-result-body>.text-button+.text-button { background:none; padding-bottom:0; font-size:11px; color:#667a94; }
+.in-project .workspace-source-list { display:block; }
+.in-project .context-card-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:6px; }
+.in-project .context-card-heading h2 { margin:0 0 6px; }
+.in-project .context-card-heading>span { font-size:11px; color:#69798e; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.in-project .workspace-source-list>button { display:flex; align-items:center; gap:9px; width:calc(100% + 12px); min-height:54px; margin:0 -6px; padding:10px 6px; border:0; border-top:1px solid #edf0f4; border-radius:0; text-align:left; font-size:12px; line-height:1.6; color:#41526a; }
+.in-project .workspace-source-list>button:hover { background:#f6f8fc; }
+.in-project .workspace-source-list>button>span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.in-project .workspace-source-list>button>.icon { width:17px; height:17px; color:#7390b5; flex-shrink:0; }
+.in-project .workspace-source-list>button>.icon:last-child { width:14px; height:14px; color:#9ba8ba; }
+.in-project .workspace-source-list>button small { display:block; font-size:11px; color:#708096; margin-top:3px; }
+.in-project .workspace-source-list>button[data-provided="false"] small { color:#946126; }
+.in-project .workspace-source-list>button[data-provided="false"]>.icon:first-child { color:#b28c58; }
+.in-project .workspace-related-links { display:flex; gap:6px 12px; flex-wrap:wrap; border-top:1px solid #edf0f4; margin-top:3px; padding-top:12px; }
+.in-project .workspace-related-links .text-button { display:inline-flex; align-items:center; justify-content:space-between; min-height:34px; font-size:11px; gap:6px; color:#517095; }
+.in-project .workspace-related-links .icon { width:13px; height:13px; }
+.in-project .workspace-version-list { margin:12px 0 0; padding:15px 0 0; border-top:1px solid #edf0f4; }
+.in-project .workspace-version-list>button { width:100%; display:flex; align-items:center; justify-content:space-between; min-height:38px; text-align:left; font-size:12px; gap:8px; color:#496b97; }
+.in-project .workspace-version-list .icon { width:14px; height:14px; }
+.in-project .workspace-version-list>p,.in-project .workspace-source-list>p { font-size:12px; color:#748196; }
+.in-project .recent-project.is-active { color:var(--blue); font-weight:600; }
 
+/* 横向专家导航的方向按钮只在实际溢出时出现。 */
+.in-project .workspace-expert-strip { display:flex; align-items:center; flex:0 0 auto; min-width:0; padding-inline:6px; }
+.in-project .workspace-expert-strip>.workspace-status-grid { flex:1 1 0; min-width:0; }
+.in-project .expert-scroll-control { display:grid; place-items:center; width:25px; height:42px; flex:0 0 25px; border-radius:6px; color:#56719a; }
+.in-project .expert-scroll-control:hover { background:#f0f4fa; }
+.in-project .expert-scroll-control .icon { width:16px; height:16px; }
+.in-project .expert-scroll-control[data-direction="-1"] .icon { transform:rotate(180deg); }
+.in-project .expert-scroll-control:disabled { opacity:.25; }
+
+/* 资料在右侧展开，专家对话保持在原来的位置。 */
+.in-project .workspace-body.is-document-open { grid-template-columns:minmax(320px,.85fr) minmax(440px,1.15fr); }
+.in-project .is-document-open>.workspace-context { display:flex; flex-direction:column; padding:0; background:#fff; border:1px solid #e3e8ef; overflow:hidden; }
+.in-project .workspace-document { display:flex; flex-direction:column; flex:1 1 0; height:100%; min-width:0; min-height:0; }
+.in-project .workspace-document-toolbar { display:flex; align-items:center; gap:12px; flex:0 0 auto; min-height:64px; padding:13px 20px; border-bottom:1px solid #e8edf4; }
+.in-project .workspace-document-toolbar>button { display:flex; align-items:center; gap:7px; min-height:36px; color:#42658e; font-size:12px; flex-shrink:0; }
+.in-project .workspace-document-toolbar>button>.icon { transform:rotate(180deg); width:15px; }
+.in-project .workspace-document-toolbar>h2 { margin:0 0 0 auto; font-size:13px; color:#697b90; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.in-project .workspace-document>.workspace-content { flex:1 1 0; min-height:0; padding:22px; }
+.in-project .workspace-document .form-grid { grid-template-columns:1fr; }
+.in-project .workspace-document .mat-compare-columns { grid-template-columns:1fr; }
 @media (max-width: 1370px) {
   .in-project .workspace-body { gap: 20px; }
   .in-project .workspace-status-grid { grid-template-columns: repeat(5, minmax(126px, 1fr)); }
-  .in-project .workspace-context { padding-left: 20px; }
+
 }
 @media (max-width: 1100px) {
   .in-project #main-content { padding: 18px 20px; }
   .in-project .workspace-body { grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; }
-  .in-project .workspace-context { padding-left: 18px; }
+
   .in-project .workspace-status-grid { grid-template-columns: repeat(5, 128px); gap: 7px; }
   .in-project .adviser-card > header { padding-inline: 15px; }
   .in-project .chat-scroll-region { padding-inline: 15px; }
@@ -214,21 +234,16 @@
 @media (max-width: 1000px) and (min-width: 901px) {
   .in-project #main-content { padding-inline: 16px; }
   .in-project .workspace-body { grid-template-columns: minmax(0, 1fr) 240px; gap: 15px; }
-  .in-project .workspace-context { padding-left: 15px; }
+
 }
 @media (max-width: 900px) {
   .in-project #main-content { padding: 16px; }
   .in-project .workspace-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 14px; }
-  .in-project .workspace-context { height: clamp(104px, 22dvh, 170px); max-height: none; padding: 11px 3px 8px; border-left: 0; border-top: 1px solid #e5e9ef; }
-  .in-project .project-progress { margin-bottom: 12px; row-gap: 5px; }
+  .in-project .workspace-context { height:clamp(120px,24dvh,190px); padding:12px; border:0; }
+
   .in-project .project-progress strong { font-size: 19px; }
-  .in-project .workspace-context-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 38px; color: #50617a; font-size: 12px; font-weight: 500; cursor: pointer; list-style: none; }
-  .in-project .workspace-context-details > summary::-webkit-details-marker { display: none; }
-  .in-project .workspace-context-details > summary .icon { width: 15px; height: 15px; transform: rotate(90deg); }
-  .in-project .workspace-context-details[open] > summary .icon { transform: rotate(-90deg); }
-  .in-project .workspace-context-details > div { padding-top: 10px; }
-  .in-project .workspace-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
-  .in-project .workspace-source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+
+
   .in-project .workspace-tabs { gap: 16px; }
   .in-project .workspace-work-heading { gap: 12px; }
   .in-project .workspace-content .form-grid { grid-template-columns: minmax(0, 1fr); }
@@ -305,6 +320,23 @@
 @media (prefers-reduced-motion: reduce) {
   .in-project .work-status-card { transition: none; }
   .in-project .workspace-status-grid { scroll-behavior: auto; }
+}
+
+@media (max-width:1100px) and (min-width:901px) {
+ .in-project .workspace-body.is-document-open { grid-template-columns:minmax(280px,.8fr) minmax(350px,1.2fr); gap:14px; }
+ .in-project .workspace-document-toolbar { padding-inline:14px; }
+ .in-project .workspace-document>.workspace-content { padding:18px 16px; }
+}
+@media (max-width:900px) {
+ .in-project .workspace-body.is-document-open { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+ .in-project .is-document-open>.workspace-main { display:none; }
+ .in-project .is-document-open>.workspace-context { height:100%; max-height:none; }
+ .in-project .workspace-document-toolbar { min-height:56px; padding:10px 15px; }
+ .in-project .context-card { padding:16px; }
+}
+@media (max-width:620px) {
+ .in-project .workspace-document-toolbar>h2 { display:none; }
+ .in-project .workspace-document>.workspace-content { padding:18px 14px; }
 }
 
 /* 工作台：项目在前，专家作为补充入口。 */

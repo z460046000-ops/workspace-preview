@@ -7,11 +7,41 @@
   const M = window.PolicyMaterials;
   const W = window.PolicyWorkspace;
   const page = document.querySelector('#page-content');
-  const narrowWorkspace = window.matchMedia?.('(max-width: 900px)');
-  narrowWorkspace?.addEventListener('change', event => {
-    const details = page.querySelector('.workspace-context-details');
-    if (details && !event.matches) details.open = true;
-  });
+  const formDrafts = new Map();
+  const documentPositions = new Map();
+  const indexPositions = new Map();
+  function draftKey(form) {
+    return form && ['profile-form','source-form'].includes(form.id)
+      ? `${form.dataset.task}:${form.id}:${form.dataset.source || ''}` : '';
+  }
+  function captureFormDraft() {
+    const form=page.querySelector('#profile-form,#source-form');
+    const key=draftKey(form);
+    if (!key || form.dataset.draftSaved) return;
+    const fields=[...form.elements].filter(input=>input.name && 'value' in input);
+    if (!formDrafts.has(key) && !fields.some(input=>input.value !== input.defaultValue)) return;
+    formDrafts.set(key,Object.fromEntries(fields.map(input=>[input.name,input.value])));
+  }
+  function restoreFormDraft() {
+    const form=page.querySelector('#profile-form,#source-form');
+    const values=formDrafts.get(draftKey(form));
+    if (!values) return;
+    Object.entries(values).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input && 'value' in input)input.value=value;});
+  }
+  function discardFormDraft(form) {
+    const key=draftKey(form);
+    if(key){formDrafts.delete(key);form.dataset.draftSaved='true';}
+  }
+  const documentKey = (taskId,route,params={}) => `${taskId}:${route}:${params.policy || params.id || ''}:${params.left || ''}:${params.right || ''}`;
+  function syncExpertControls() {
+    const nav=page.querySelector('.workspace-status-grid');
+    if (!nav) return;
+    const max=Math.max(0,nav.scrollWidth-nav.clientWidth);
+    page.querySelectorAll('.expert-scroll-control').forEach(button=>{
+      button.hidden=max <= 1;
+      button.disabled=Number(button.dataset.direction)<0 ? nav.scrollLeft <= 1 : nav.scrollLeft >= max-1;
+    });
+  }
   const paths = {
     plus:'M12 5v14M5 12h14', grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
     layers:'m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5', folder:'M3 7V5h6l2 2h10v13H3V7Z',
@@ -72,12 +102,15 @@
   function render() {
     const previousWorkspace = page.querySelector('.project-workspace');
     const previousContextTop = page.querySelector('.workspace-context')?.scrollTop || 0;
-    const previousContextOpen = page.querySelector('.workspace-context-details')?.open;
     const previousCardsLeft = page.querySelector('.workspace-status-grid')?.scrollLeft || 0;
     const previousContentTop = page.querySelector('.workspace-content')?.scrollTop || 0;
     const focusedExpert = document.activeElement?.closest('.work-status-card')?.dataset.work;
-    const focusedView = document.activeElement?.closest('[data-action="workspace-tab"]')?.dataset.id;
     const focusedInput = document.activeElement?.id === 'adviser-message';
+    captureFormDraft();
+    if(previousWorkspace){
+      if(previousWorkspace.dataset.route === 'task')indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
+      else documentPositions.set(previousWorkspace.dataset.documentKey,previousContentTop);
+    }
     window.PolicyChat.captureView();
     const {route,params} = currentRoute();
     const versionId = route === 'version' ? params.id : route === 'compare' ? params.left : '';
@@ -90,7 +123,8 @@
     const sameProject = isProject && previousWorkspace?.dataset.task === taskId;
     if (previousWorkspace && !sameProject) W.leave(previousWorkspace.dataset.task);
     const routeWork = {profile:'profile',policy:'match',diagnosis:'diagnosis',assembly:'assembly',guidance:'review',version:'review',compare:'review'};
-    const workId = task ? W.selectedWork(task,routeWork[route] || params.work) : '';
+    const workId = task ? W.selectedWork(task,params.work || routeWork[route]) : '';
+    const nextDocumentKey=documentKey(taskId,route,params);
     if (task && projectRoutes.includes(route) && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
     const renderers = {
       dashboard:() => V.dashboard({filter:params.filter}), new:() => V.newTask({intent:params.intent}), services:() => V.services({type:params.type,query:params.query}),
@@ -101,6 +135,8 @@
     try {
       const content = renderers[route]();
       page.innerHTML = isProject ? W.render(taskId,{workId,content,route}) : content;
+      const workspace=page.querySelector('.project-workspace');
+      if(workspace)workspace.dataset.documentKey=nextDocumentKey;
       document.body.classList.toggle('in-project',isProject && Boolean(page.querySelector('.project-workspace')));
     }
     catch (error) {
@@ -112,20 +148,15 @@
     const title = page.querySelector('h1')?.textContent || '惠企政策平台';
     document.title = `${title} · 惠企政策平台`;
     window.PolicyChat.restoreView();
+    restoreFormDraft();
+    const documentContent=page.querySelector('.workspace-content');
+    if(documentContent)documentContent.scrollTop=documentPositions.get(nextDocumentKey) || 0;
+    const context=page.querySelector('.workspace-context');
+    if(context && route === 'task')context.scrollTop=indexPositions.get(taskId) || 0;
     if (sameProject) {
-      const context = page.querySelector('.workspace-context');
-      if (context) context.scrollTop = previousContextTop;
-      const details = page.querySelector('.workspace-context-details');
-      if (details && previousContextOpen !== undefined) details.open = previousContextOpen;
-      if (details && narrowWorkspace?.matches === false) details.open = true;
       const cards = page.querySelector('.workspace-status-grid');
       if (cards) cards.scrollLeft = previousCardsLeft;
-      if (previousWorkspace.dataset.route === route && previousWorkspace.dataset.work === workId) {
-        const content = page.querySelector('.workspace-content');
-        if (content) content.scrollTop = previousContentTop;
-      }
       const focusTarget = focusedExpert ? page.querySelector(`#expert-tab-${focusedExpert}`)
-        : focusedView ? page.querySelector(`[data-action="workspace-tab"][data-id="${focusedView}"]`)
         : focusedInput ? page.querySelector('#adviser-message') : null;
       focusTarget?.focus({preventScroll:true});
     } else {
@@ -140,11 +171,14 @@
       if (activeBounds.left < bounds.left) cards.scrollLeft -= bounds.left - activeBounds.left + 10;
       else if (activeBounds.right > bounds.right) cards.scrollLeft += activeBounds.right - bounds.right + 10;
     }
+    cards?.addEventListener('scroll',syncExpertControls,{passive:true});
+    syncExpertControls();
   }
   window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render});
   document.querySelectorAll('[data-icon]').forEach(element => {element.innerHTML = icon(element.dataset.icon);});
   S.subscribe(sidebar);
   window.addEventListener('hashchange',render);
+  window.addEventListener('resize',syncExpertControls);
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closeMenu();
     const current = event.target instanceof Element ? event.target.closest('.work-status-card[role="tab"]') : null;
@@ -201,14 +235,17 @@
       const input = page.querySelector('#task-request');
       if (input) { const addition = target.dataset.prompt || '';input.value = `${input.value.trim()}${input.value.trim() ? '\n':''}${addition}`.slice(0,5000);S.saveTaskDraft(input.value);input.focus(); }
     } else if (action === 'dashboard-filter') navigate('dashboard',{filter:target.dataset.id});
-    else if (action === 'workspace-tab' && task) {
-      const work = W.selectedWork(task,target.dataset.work);
-      if (target.dataset.id === 'chat') navigate('task',{task:task.id,work});
-      else { const destination = W.contentDestination(task,work); navigate(destination.route,{task:task.id,work,id:destination.id}); }
+    else if (action === 'workspace-expert' && task) {
+      const current=currentRoute();
+      navigate(current.route,{...current.params,task:task.id,work:target.dataset.work});
+    } else if (action === 'workspace-expert-scroll') {
+      const nav=page.querySelector('.workspace-status-grid');
+      if(nav){nav.scrollLeft+=Number(target.dataset.direction)*Math.max(140,nav.clientWidth*.7);syncExpertControls();}
     } else if (action === 'service-tab') navigate('services',{type:target.dataset.id});
     else if (action === 'service-use') useService(target.dataset.id,target.dataset.task);
     else if (action === 'team-use') navigate('new',{intent:target.dataset.id});
     else if (action === 'load-demo' && task) {
+      discardFormDraft(page.querySelector('#profile-form'));
       const demo = D.createTaskSeed({loadDemo:true});
       S.updateTask(task.id,{company:demo.company,sources:demo.sources,requirements:demo.requirements,status:'processing',steps:{profile:true,match:false,diagnosis:false,assembly:false,review:false}});
       render();toast('已载入虚构企业资料，可以继续检索政策。');
@@ -239,6 +276,8 @@
   });
   document.addEventListener('input', event => {
     if (event.target?.id === 'task-request') S.saveTaskDraft(event.target.value);
+    const form=event.target?.closest?.('#profile-form,#source-form');
+    if(form){delete form.dataset.draftSaved;captureFormDraft();}
   });
   function formError(form,message) {
     let box = form.querySelector('.form-error');
@@ -270,12 +309,14 @@
       const patch={company,steps:{profile:true}};
       if (changed) {patch.steps={profile:true,match:false,diagnosis:false,assembly:false,review:false};patch.status='processing';}
       if (!S.updateTask(task.id,patch)) {formError(form,'档案保存失败，请重试。');return;}
+      discardFormDraft(form);
       navigate('policy',{task:task.id});toast('企业档案已确认。');
     } else if (form.id === 'services-search-form') navigate('services',{type:form.dataset.type,query:value('query')});
     else if (form.id === 'source-form') {
       const task=S.getTask(form.dataset.task);
       if (!task || !value('text')) {formError(form,'请填写资料正文。');return;}
       if (!updateSource(task,form.dataset.source,value('text'))) {formError(form,'资料未能保存，请重试。');return;}
+      discardFormDraft(form);
       navigate('diagnosis',{task:task.id});toast('资料已保存，请重新组稿后核对新版本。');
     }
   });

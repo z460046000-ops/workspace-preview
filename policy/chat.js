@@ -117,12 +117,11 @@
         : `<span class="chat-message-avatar chat-message-expert-avatar" aria-hidden="true" style="--portrait-x:${author.x}%;--portrait-y:${author.y}%"></span>`;
       return `<div class="chat-message-row ${isUser ? 'is-user' : 'is-assistant'}">${avatar}<div class="chat-message-body"><span class="chat-message-name">${isUser ? '企业负责人' : E(author.name)}</span><p class="chat-message chat-${message.role}${context ? ' chat-context' : ''}">${E(message.text)}</p></div></div>`;
     };
-    const tabsHTML = typeof options?.tabsHTML === 'string' ? options.tabsHTML : '';
     const statusLabel = options?.statusLabel ? `<span class="chat-expert-status">${E(options.statusLabel)}</span>` : '';
     const attrs = `${action.route ? `data-route="${action.route}"` : `data-action="${action.action}"`} data-task="${E(task.id)}" data-work="${workId}"${action.id ? ` data-id="${E(action.id)}"` : ''}`;
     return `<section class="adviser-card" data-chat-task="${E(task.id)}" data-chat-work="${workId}" aria-label="${E(expert.name)}对话">
-      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-header-identity"><h2>${E(expert.name)}</h2><div class="chat-expert-meta"><span class="muted chat-expert-subject">${E(expert.subject)}</span>${statusLabel}</div></div>${tabsHTML}</header>
-      <div class="chat-scroll-region"><div class="chat-messages" aria-live="polite">${messageHtml({ role: 'assistant', text: answer(task, '', workId), workId }, true)}${messages.map(message => messageHtml(message)).join('')}</div>
+      <header><span class="role-avatar chat-expert-avatar" aria-hidden="true" style="--portrait-x:${expert.x}%;--portrait-y:${expert.y}%"></span><div class="chat-header-identity"><h2>${E(expert.name)}</h2><div class="chat-expert-meta"><span class="muted chat-expert-subject">${E(expert.subject)}</span>${statusLabel}</div></div></header>
+      <div class="chat-scroll-region" tabindex="0" aria-label="对话记录"><div class="chat-messages" aria-live="polite">${messageHtml({ role: 'assistant', text: answer(task, '', workId), workId }, true)}${messages.map(message => messageHtml(message)).join('')}</div>
         <div class="chat-work-action"><div><strong>${E(action.label)}</strong><p class="muted">${E(action.detail)}</p></div><button class="button button-primary" ${attrs}>${E(action.label)} ${I('arrow')}</button></div>
         ${history.length ? `<details class="chat-project-history"><summary>项目历史对话 <span>${history.length} 条</span></summary><div class="chat-messages">${history.map(message => messageHtml(message)).join('')}</div></details>` : ''}
       </div>
