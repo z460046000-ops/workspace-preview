@@ -164,6 +164,25 @@
     return task;
   }
 
+  function deleteTask(taskId) {
+    if (!getTask(taskId)) return false;
+    const tasks = state.tasks.filter(task => task.id !== taskId);
+    const versions = state.versions.filter(version => version.taskId !== taskId);
+    const activeTaskId = state.activeTaskId === taskId ? tasks[0]?.id || null : state.activeTaskId;
+    try {
+      // 先保存候选快照，失败时保留全部原记录与当前项目。
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({schemaVersion:1,tasks,versions,activeTaskId,draft:state.draft}));
+      state = {...state,tasks,versions,activeTaskId,storageAvailable:true,storageError:'',dirty:false};
+    } catch {
+      state.storageAvailable = false;
+      state.storageError = '删除未能保存，项目及其资料仍保留，请重试。';
+      subscribers.forEach(subscriber => {try {subscriber(state);} catch {}});
+      return false;
+    }
+    subscribers.forEach(subscriber => {try {subscriber(state);} catch {}});
+    return true;
+  }
+
   function updateTask(taskId, patch) {
     const original = getTask(taskId);
     if (!original || !plain(patch)) return false;
@@ -228,7 +247,7 @@
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
-    createTask, updateTask, saveVersion, confirmVersion,
+    createTask, deleteTask, updateTask, saveVersion, confirmVersion,
     saveTaskDraft(value) {
       if (typeof value !== 'string') return false;
       state.draft = text(value);

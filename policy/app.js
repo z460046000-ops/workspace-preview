@@ -18,7 +18,7 @@
   function captureFormDraft() {
     const form=page.querySelector('#profile-form,#source-form');
     const key=draftKey(form);
-    if (!key || form.dataset.draftSaved) return;
+    if (!key || !S.getTask(form.dataset.task) || form.dataset.draftSaved) return;
     const fields=[...form.elements].filter(input=>input.name && 'value' in input);
     if (!formDrafts.has(key) && !fields.some(input=>input.value !== input.defaultValue)) return;
     formDrafts.set(key,Object.fromEntries(fields.map(input=>[input.name,input.value])));
@@ -32,6 +32,15 @@
   function discardFormDraft(form) {
     const key=draftKey(form);
     if(key){formDrafts.delete(key);form.dataset.draftSaved='true';}
+  }
+  function forgetProject(taskId) {
+    for (const map of [formDrafts,documentPositions]) {
+      for (const key of map.keys()) if(key.startsWith(`${taskId}:`)) map.delete(key);
+    }
+    indexPositions.delete(taskId);
+    window.PolicyChat.forgetTask(taskId);
+    M.forgetTask(taskId);
+    W.leave(taskId);
   }
   const documentKey = (taskId,route,params={}) => `${taskId}:${route}:${params.policy || params.id || ''}:${params.left || ''}:${params.right || ''}`;
   function syncExpertControls() {
@@ -53,6 +62,7 @@
     route:'M5 4h14v5H5zM12 9v6M4 20h16M4 20v-5h16v5M12 15v5',
     menu:'M4 6h16M4 12h16M4 18h16', close:'m6 6 12 12M6 18 18 6', clock:'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
     download:'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5', alert:'M12 8v5m0 4h.01M12 3 2 21h20L12 3Z',
+    trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
   };
   const escape = (value = '') => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name] || paths.file}"/></svg>`;
@@ -96,7 +106,7 @@
       if (active) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
     });
     const projectRoute = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'].includes(route);
-    document.querySelector('#recent-projects').innerHTML = state.tasks.slice(0,8).map(task => `<button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button>`).join('');
+    document.querySelector('#recent-projects').innerHTML = state.tasks.slice(0,8).map(task => `<div class="recent-project-row"><button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button><button type="button" class="icon-button project-delete" data-action="delete-project" data-task="${escape(task.id)}" aria-label="删除项目：${escape(task.title)}" title="删除项目">${icon('trash')}</button></div>`).join('');
     document.querySelector('#storage-status').textContent = state.storageError || state.loadWarning || '';
   }
   function renderSource(taskId, sourceId) {
@@ -113,7 +123,7 @@
     const focusedExpert = document.activeElement?.closest('.work-status-card')?.dataset.work;
     const focusedInput = document.activeElement?.id === 'adviser-message';
     captureFormDraft();
-    if(previousWorkspace){
+    if(previousWorkspace && S.getTask(previousWorkspace.dataset.task)){
       if(previousWorkspace.dataset.viewRoute === 'task')indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
       else documentPositions.set(previousWorkspace.dataset.documentKey,previousContentTop);
     }
@@ -220,6 +230,22 @@
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest('button[data-action],a[data-action],button[data-route],a[data-route]') : null;
     if (!target) return;
+    if (target.dataset.action === 'delete-project') {
+      event.preventDefault();
+      const task=S.getTask(target.dataset.task);
+      if (!task) {toast('没有找到这个项目，请刷新后重试。');return;}
+      const versionCount=S.getState().versions.filter(version=>version.taskId===task.id).length;
+      if (!window.confirm(`删除项目“${task.title}”？\n将一并删除本项目的对话、资料和 ${versionCount} 个材料版本，且无法恢复。`)) return;
+      const current=currentRoute();
+      const versionIds=current.route==='version' ? [current.params.id] : current.route==='compare' ? [current.params.left,current.params.right] : [];
+      const inDeletedProject=page.querySelector('.project-workspace')?.dataset.task===task.id || S.getState().versions.some(version=>versionIds.includes(version.id) && version.taskId===task.id);
+      if (!S.deleteTask(task.id)) {toast(S.getState().storageError);return;}
+      forgetProject(task.id);
+      if (inDeletedProject) navigate('dashboard');
+      else if (['dashboard','batch','library','services'].includes(current.route)) render();
+      toast('项目已删除。');
+      return;
+    }
     if (B.handleClick(target)) return;
     if(window.PolicyChat.handleClick(target)) return;
     if (M.handleClick(target)) return;

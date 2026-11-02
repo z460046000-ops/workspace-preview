@@ -321,5 +321,5 @@
     } else if (input.hasAttribute('data-mat-note')) draft.note = input.value;
   });
 
-  window.PolicyMaterials = Object.freeze({ renderAssembly, renderLibrary, renderVersion, renderCompare, handleClick, handleSubmit });
+  window.PolicyMaterials = Object.freeze({ renderAssembly, renderLibrary, renderVersion, renderCompare, handleClick, handleSubmit, forgetTask:taskId=>drafts.delete(taskId) });
 })();

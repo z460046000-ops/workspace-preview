@@ -133,7 +133,7 @@
 
   function captureView() {
     const panel = document.querySelector('.adviser-card[data-chat-task]');
-    if (!panel) return false;
+    if (!panel || !S().getTask(panel.dataset.chatTask)) return false;
     const key = keyFor(panel.dataset.chatTask, validWork(panel.dataset.chatWork));
     const region = panel.querySelector(':scope > .chat-scroll-region');
     const input = panel.querySelector('#adviser-message');
@@ -177,6 +177,11 @@
     if (form?.dataset.task) drafts.set(keyFor(form.dataset.task, validWork(form.dataset.work)), event.target.value.slice(0, 2000));
   });
   window.PolicyChat = Object.freeze({ render, captureView, restoreView,
+    forgetTask(taskId) {
+      for (const map of [drafts,scrollPositions]) {
+        for (const key of map.keys()) if(key.startsWith(`${taskId}:`)) map.delete(key);
+      }
+    },
     handleClick(target) {
       if (target.dataset.action !== 'chat-prompt') return false;
       send(target.dataset.task, target.dataset.prompt, target.dataset.work);
