@@ -72,7 +72,7 @@
     const list = `<section class="dashboard-projects" aria-label="申报项目">${projects || `<div class="empty-state"><h2>${emptyText}</h2>${selected === 'active' ? route('new', '创建第一个项目', '', '', 'button button-primary') : '<p class="muted">可以切换到进行中，查看其他项目。</p>'}</div>`}</section>`;
     const roles = ['整理企业画像与资料', '筛选合适的候选政策', '讲清条件和材料要求', '找出缺口和下一步', '按模板整理已有资料', '核对办理步骤与要求'];
     const services = `<section class="dashboard-help" aria-labelledby="dashboard-help-title"><div class="section-heading"><h2 id="dashboard-help-title">需要哪方面帮助？</h2>${route('services', '全部专家', '', '', 'text-button')}</div><div class="dashboard-help-grid">${D().services.map((service, index) => `<button type="button" class="dashboard-expert-card" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}><span class="dashboard-expert-avatar" aria-hidden="true" style="--expert-x:${persona(service.id).x}%;--expert-y:${persona(service.id).y}%"></span><span class="dashboard-expert-copy"><strong>${E(persona(service.id).name)}</strong><small>${E(roles[index] || service.output)}</small></span>${I('arrow')}</button>`).join('')}</div></section>`;
-    return `${header('申报工作台')}${tabs}${list}${services}`;
+    return `${header('申报工作台')}${window.PolicyBatch?.renderEntry() || ''}${tabs}${list}${services}`;
   }
 
   function newTask({ intent = '' } = {}) {

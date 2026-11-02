@@ -6,6 +6,7 @@
   const V = window.PolicyViews;
   const M = window.PolicyMaterials;
   const W = window.PolicyWorkspace;
+  const B = window.PolicyBatch;
   const page = document.querySelector('#page-content');
   const formDrafts = new Map();
   const documentPositions = new Map();
@@ -63,7 +64,7 @@
     target.hidden = false;
     toastTimer = setTimeout(() => { target.hidden = true; }, 5200);
   }
-  const allowedRoutes = new Set(['dashboard','new','services','library','task','profile','policy','diagnosis','assembly','guidance','version','compare','source']);
+  const allowedRoutes = new Set(['dashboard','batch','new','services','library','task','profile','policy','diagnosis','assembly','guidance','version','compare','source']);
   function currentRoute() {
     const [route, raw = ''] = location.hash.slice(1).split('?');
     return { route: allowedRoutes.has(route) ? route : 'dashboard', params: Object.fromEntries(new URLSearchParams(raw)) };
@@ -84,6 +85,11 @@
   function sidebar() {
     const state = S.getState();
     const {route} = currentRoute();
+    const researcher = B.getRole() === 'researcher';
+    document.querySelector('#user-type').value = B.getRole();
+    document.querySelector('[data-nav="batch"]').hidden = !researcher;
+    document.querySelector('#user-space-name').textContent = researcher ? '政策研究工作空间' : '企业服务空间';
+    document.querySelector('.demo-identity strong').textContent = researcher ? '政策研究工作空间' : '企业服务空间';
     document.querySelectorAll('[data-nav]').forEach(link => {
       const active = link.dataset.nav === route || link.dataset.nav === 'library' && ['assembly','version','compare'].includes(route);
       link.classList.toggle('is-active',active);
@@ -113,6 +119,7 @@
     }
     window.PolicyChat.captureView();
     const {route,params} = currentRoute();
+    if (route === 'batch' && B.getRole() !== 'researcher') B.setRole('researcher');
     const versionId = route === 'version' ? params.id : route === 'compare' ? params.left : '';
     const versionTask = S.getState().versions.find(version => version.id === versionId)?.taskId;
     const taskId = versionTask || params.task || (['task','profile','diagnosis','assembly','guidance'].includes(route) ? params.id : '') || S.getState().activeTaskId;
@@ -128,6 +135,7 @@
     if (task && projectRoutes.includes(route) && task.selectedWorkId !== workId) S.updateTask(task.id,{selectedWorkId:workId});
     const renderers = {
       dashboard:() => V.dashboard({filter:params.filter}), new:() => V.newTask({intent:params.intent}), services:() => V.services({type:params.type,query:params.query}),
+      batch:() => B.render(),
       library:() => M.renderLibrary(), task:() => '', profile:() => V.profile(taskId), policy:() => V.policy(taskId,params.policy || params.id),
       diagnosis:() => V.diagnosis(taskId), assembly:() => M.renderAssembly(taskId), guidance:() => V.guidance(taskId),
       version:() => M.renderVersion(params.id), compare:() => M.renderCompare(params.left,params.right), source:() => renderSource(taskId,params.id),
@@ -145,6 +153,7 @@
       page.innerHTML = '<section class="empty-state"><h1>当前页面未能打开</h1><p>已保存的任务会保留，请返回工作台重试。</p><button class="button button-primary" data-route="dashboard">返回工作台</button></section>';
     }
     sidebar();
+    B.syncSelection();
     const title = page.querySelector('h1')?.textContent || '惠企政策平台';
     document.title = `${title} · 惠企政策平台`;
     window.PolicyChat.restoreView();
@@ -211,6 +220,7 @@
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest('button[data-action],a[data-action],button[data-route],a[data-route]') : null;
     if (!target) return;
+    if (B.handleClick(target)) return;
     if(window.PolicyChat.handleClick(target)) return;
     if (M.handleClick(target)) return;
     if (target.dataset.route) {
@@ -273,6 +283,18 @@
       if (!text) {navigate('source',{task:task.id,id:requirement.sourceId});return;}
       updateSource(task,requirement.sourceId,text);render();toast('已补充虚构示例资料，材料组稿前请核对来源。');
     } else if (action === 'view-source' && task) navigate('source',{task:task.id,id:target.dataset.id,work:target.dataset.work || task.selectedWorkId});
+  });
+  document.addEventListener('change', event => {
+    const target=event.target;
+    if (!(target instanceof Element)) return;
+    if (target.id === 'user-type') {
+      B.setRole(target.value);
+      const {route}=currentRoute();
+      if (['dashboard','batch'].includes(route)) navigate(B.getRole()==='researcher' ? 'batch' : 'dashboard');
+      else sidebar();
+      return;
+    }
+    B.handleChange(target);
   });
   document.addEventListener('input', event => {
     if (event.target?.id === 'task-request') S.saveTaskDraft(event.target.value);
