@@ -11,6 +11,7 @@
   const formDrafts = new Map();
   const documentPositions = new Map();
   const indexPositions = new Map();
+  let companyStartDraft = '';
   function draftKey(form) {
     return form && ['profile-form','source-form'].includes(form.id)
       ? `${form.dataset.task}:${form.id}:${form.dataset.source || ''}` : '';
@@ -106,7 +107,7 @@
       if (active) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
     });
     const projectRoute = ['task','profile','policy','diagnosis','assembly','guidance','version','compare','source'].includes(route);
-    document.querySelector('#recent-projects').innerHTML = state.tasks.slice(0,8).map(task => `<div class="recent-project-row"><button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button><button type="button" class="icon-button project-delete" data-action="delete-project" data-task="${escape(task.id)}" aria-label="删除项目：${escape(task.title)}" title="删除项目">${icon('trash')}</button></div>`).join('');
+    document.querySelector('#recent-projects').innerHTML = state.tasks.map(task => `<div class="recent-project-row"><button class="recent-project${projectRoute && state.activeTaskId === task.id ? ' is-active' : ''}" data-route="task" data-task="${escape(task.id)}"${projectRoute && state.activeTaskId === task.id ? ' aria-current="page"' : ''} title="${escape(task.title)}">${escape(task.title)}</button><button type="button" class="icon-button project-delete" data-action="delete-project" data-task="${escape(task.id)}" aria-label="删除项目：${escape(task.title)}" title="删除项目">${icon('trash')}</button></div>`).join('');
     document.querySelector('#storage-status').textContent = state.storageError || state.loadWarning || '';
   }
   function renderSource(taskId, sourceId) {
@@ -193,7 +194,7 @@
     cards?.addEventListener('scroll',syncExpertControls,{passive:true});
     syncExpertControls();
   }
-  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render});
+  window.PolicyUI = Object.freeze({escape,icon,navigate,toast,refresh:render,getCompanyDraft:()=>companyStartDraft});
   document.querySelectorAll('[data-icon]').forEach(element => {element.innerHTML = icon(element.dataset.icon);});
   S.subscribe(sidebar);
   window.addEventListener('hashchange',render);
@@ -323,6 +324,7 @@
     B.handleChange(target);
   });
   document.addEventListener('input', event => {
+    if (event.target?.id === 'start-company-name') companyStartDraft = event.target.value.slice(0,300);
     if (event.target?.id === 'task-request') S.saveTaskDraft(event.target.value);
     const form=event.target?.closest?.('#profile-form,#source-form');
     if(form){delete form.dataset.draftSaved;captureFormDraft();}
@@ -340,7 +342,18 @@
     event.preventDefault();
     const values = new FormData(form);
     const value = name=>String(values.get(name) || '').trim();
-    if (form.id === 'new-task-form') {
+    if (form.id === 'company-start-form') {
+      const name=value('companyName');
+      if (!name || name.length>300) {formError(form,'请填写企业名称，最多300字。');return;}
+      if (form.dataset.started) return;
+      form.dataset.started='true';
+      const button=form.querySelector('[type="submit"]');
+      button.disabled=true;
+      const task=S.createTask({title:`${name} · 政策申报`,request:`为${name}梳理企业资料，查找适用政策并准备申报材料。`,company:{name,region:'',industry:''}});
+      if (!task) {delete form.dataset.started;button.disabled=false;formError(form,'任务未能创建，请重试。');return;}
+      companyStartDraft='';
+      navigate('task',{task:task.id,work:'profile'});
+    } else if (form.id === 'new-task-form') {
       const request=value('request'),name=value('companyName'),region=value('region'),industry=value('industry');
       if (!request || !name || !region || !industry) {formError(form,'请填写企业名称、地区、行业和申报目标。');return;}
       const title = request.replace(/[\n\r]+/g,' ').slice(0,36);

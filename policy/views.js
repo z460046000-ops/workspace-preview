@@ -39,40 +39,20 @@
   const mockScore = (policy) => `<div class="mock-score"><div><span class="muted">预估申报成功率</span><strong>${E(policy.mockSuccess)}<small>%</small></strong></div><div><span class="tag tag-muted">模拟值</span><p class="muted">仅作演示，不代表获批判断。</p></div></div>`;
   const field = (label, name, value = '', options = {}) => `<label class="form-field" for="field-${E(name)}"><span>${E(label)}${options.required ? '<span aria-hidden="true"> *</span>' : ''}</span><input id="field-${E(name)}" name="${E(name)}" type="${E(options.type || 'text')}" maxlength="${options.max || 200}" value="${E(value)}"${options.required ? ' required' : ''}${options.placeholder ? ` placeholder="${E(options.placeholder)}"` : ''}${options.type === 'number' ? ' min="0" step="1"' : ''}></label>`;
 
-  function dashboard({ filter = 'active' } = {}) {
-    const tasks = S().getState().tasks;
-    const current = activeTask();
-    const isDone = (task) => task.steps.review === true || task.status === 'done';
-    const needsMe = (task) => !isDone(task) && (window.PolicyWorkspace?.workItems?.(task).some(item => ['waiting','review'].includes(item.status)) ?? (!task.steps.profile || (task.steps.diagnosis && task.requirements.some((item) => item.status !== 'ready')) || (task.steps.assembly && !task.steps.review)));
-    const selected = ['active', 'mine', 'done'].includes(filter) ? filter : 'active';
-    const groups = { active: tasks.filter((task) => !isDone(task)), mine: tasks.filter(needsMe), done: tasks.filter(isDone) };
-    const responsible = (task) => {
-      if (isDone(task)) return { key: 'review', label: '材料已确认', expert: '企业负责人', status: '准备已完成', tone: 'tag-success', detail: '已确认的材料版本可以在材料库中查看。' };
-      const workItems = window.PolicyWorkspace?.workItems?.(task);
-      if (Array.isArray(workItems) && workItems.length) {
-        const open = workItems.filter((item) => item.status !== 'done').sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
-        const item = open.find((entry) => ['waiting', 'review'].includes(entry.status)) || open[0];
-        if (item) return { key: item.id, label: item.title, expert: item.owner, status: item.label, tone: ['waiting', 'review'].includes(item.status) ? 'tag-warn' : 'tag-muted', detail: item.reason || '打开事项，查看当前结果与下一步。' };
-      }
-      if (!task.steps.profile) return { key: 'profile', label: '企业档案', expert: '企业资料助理', status: '等你补资料', tone: 'tag-warn', detail: '先确认企业基本情况和资料来源。' };
-      if (!task.steps.match) return { key: 'match', label: '政策匹配', expert: '政策匹配顾问', status: '待查找政策', tone: 'tag-muted', detail: '根据企业地区、行业和申报目标查找候选政策。' };
-      if (!task.steps.diagnosis) return { key: 'diagnosis', label: '差距诊断', expert: '申报诊断顾问', status: '待核对条件', tone: 'tag-muted', detail: '对照所选政策核对材料和适用条件。' };
-      const pending = task.requirements.filter((item) => item.status !== 'ready');
-      if (pending.length) return { key: 'diagnosis', label: '差距诊断', expert: '申报诊断顾问', status: pending.some((item) => item.status === 'missing' || (item.status === 'unknown' && item.kind === 'material')) ? '等你补资料' : '待你核对', tone: 'tag-warn', detail: missingSummary(task) };
-      if (!task.steps.assembly) return { key: 'assembly', label: '材料组稿', expert: '材料组稿专员', status: '待整理材料', tone: 'tag-muted', detail: '资料清单已具备，可以按模板整理申报草稿。' };
-      return { key: 'review', label: '人工确认', expert: '企业负责人', status: '待你核对', tone: 'tag-warn', detail: '核对材料内容与引用来源，确认准备使用的版本。' };
-    };
-    const tabs = `<div class="dashboard-toolbar"><div class="dashboard-tabs" role="group" aria-label="筛选申报项目">${[['active', '进行中'], ['mine', '待我处理'], ['done', '已完成']].map(([key, label]) => `<button type="button" class="dashboard-tab${key === selected ? ' is-active' : ''}" data-action="dashboard-filter" data-id="${key}" aria-pressed="${key === selected}">${label}<span>${groups[key].length}</span></button>`).join('')}</div>${route('new', '创建新任务', '', '', 'button button-primary')}</div>`;
-    const projects = groups[selected].map((task) => {
-      const work = responsible(task);
-      const taskButton = (label, className) => `<button type="button" class="${className}" data-route="task" data-task="${E(task.id)}" data-work="${E(work.key)}">${E(label)}${className.includes('text-button') ? I('arrow') : ''}</button>`;
-      return `<article class="dashboard-project-card"><div class="dashboard-project-heading"><span class="tag ${work.tone}">${E(work.status)}</span><span class="dashboard-project-step muted">${stats(task).completed}/5 项工作已完成</span></div><h2>${taskButton(task.title, 'dashboard-project-title')}</h2><p class="dashboard-project-company muted">${E(task.company.name || '企业档案待填写')}</p><div class="dashboard-current-work"><span class="dashboard-work-indicator" aria-hidden="true"></span><div><strong>${E(work.label)}</strong><span>${E(work.expert)}</span></div></div><p class="dashboard-project-next">${E(work.detail)}</p><div class="dashboard-project-footer">${progress(task)}<div class="dashboard-project-actions"><button type="button" class="icon-button project-delete" data-action="delete-project" data-task="${E(task.id)}" aria-label="删除项目：${E(task.title)}" title="删除项目">${I('trash')}</button>${taskButton(isDone(task) ? '查看项目' : '继续处理', 'text-button')}</div></div></article>`;
+  function dashboard() {
+    const experts = [
+      ['profile','企业资料','理清企业情况'],
+      ['search','政策匹配','找到适用政策'],
+      ['interpret','条件解读','讲清申报要求'],
+      ['diagnosis','差距诊断','找出缺口与建议'],
+      ['assembly','材料组稿','整理资料与版本'],
+      ['guidance','办理指引','核对提交与办理'],
+    ];
+    const cards = experts.map(([key,stage,result],index) => {
+      const person=persona(key);
+      return `<li class="start-expert-card" data-service="${key}"><div class="start-expert-step"><span class="start-expert-number">${String(index+1).padStart(2,'0')}</span><span>${stage}</span>${index<experts.length-1?I('arrow'):''}</div><article class="start-expert-body"><span class="start-expert-portrait" aria-hidden="true" style="--portrait-x:${person.x}%;--portrait-y:${person.y}%"></span><div class="start-expert-copy"><h2>${E(person.name)}</h2><p>${result}</p></div></article></li>`;
     }).join('');
-    const emptyText = selected === 'done' ? '还没有完成准备的项目' : selected === 'mine' ? '暂时没有需要你处理的事项' : '还没有进行中的项目';
-    const list = `<section class="dashboard-projects" aria-label="申报项目">${projects || `<div class="empty-state"><h2>${emptyText}</h2>${selected === 'active' ? route('new', '创建第一个项目', '', '', 'button button-primary') : '<p class="muted">可以切换到进行中，查看其他项目。</p>'}</div>`}</section>`;
-    const roles = ['整理企业画像与资料', '筛选合适的候选政策', '讲清条件和材料要求', '找出缺口和下一步', '按模板整理已有资料', '核对办理步骤与要求'];
-    const services = `<section class="dashboard-help" aria-labelledby="dashboard-help-title"><div class="section-heading"><h2 id="dashboard-help-title">需要哪方面帮助？</h2>${route('services', '全部专家', '', '', 'text-button')}</div><div class="dashboard-help-grid">${D().services.map((service, index) => `<button type="button" class="dashboard-expert-card" data-action="service-use" data-id="${E(service.id)}"${current ? ` data-task="${E(current.id)}"` : ''}><span class="dashboard-expert-avatar" aria-hidden="true" style="--expert-x:${persona(service.id).x}%;--expert-y:${persona(service.id).y}%"></span><span class="dashboard-expert-copy"><strong>${E(persona(service.id).name)}</strong><small>${E(roles[index] || service.output)}</small></span>${I('arrow')}</button>`).join('')}</div></section>`;
-    return `${header('申报工作台')}${window.PolicyBatch?.renderEntry() || ''}${tabs}${list}${services}`;
+    return `<div class="company-start-page">${header('申报工作台')}<section class="start-experts" aria-label="专家按申报准备顺序排列，可左右滚动" tabindex="0"><ol class="start-expert-row">${cards}</ol></section><form id="company-start-form" class="company-start-form"><label for="start-company-name">企业名称</label><input id="start-company-name" name="companyName" type="text" maxlength="300" required autocomplete="organization" placeholder="请输入企业名称" value="${E(window.PolicyUI.getCompanyDraft())}"><button type="submit" class="button button-primary">开始任务 ${I('arrow')}</button></form></div>`;
   }
 
   function newTask({ intent = '' } = {}) {
