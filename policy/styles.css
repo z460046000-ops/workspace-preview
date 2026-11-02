@@ -24,3 +24,5 @@ html,body,*{scrollbar-width:none;scrollbar-gutter:auto}
 .task-composer .prompt-card:hover{background:#eaf0fa;color:#245aa7}
 .task-composer .prompt-card svg{width:13px;height:13px;color:#7790b0}
 @media(max-width:700px){.task-composer .request-field textarea{font-size:16px;padding:16px 16px 8px}.task-composer .prompt-examples{padding:10px 12px 13px;gap:7px}.task-composer .prompt-card{font-size:12px;min-height:36px}.task-composer .prompt-examples>h2{margin-bottom:1px}}
+
+.source-form-actions{justify-content:flex-end}

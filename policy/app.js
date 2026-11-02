@@ -97,7 +97,7 @@
     const task = S.getTask(taskId);
     const source = task?.sources.find(item => item.id === sourceId);
     if (!source) return '<div class="empty-state"><h1>没有找到这份资料</h1><button class="button button-secondary" data-route="dashboard">返回工作台</button></div>';
-    return `<div class="source-page"><header class="page-header"><div><h1>${escape(source.name)}</h1><p class="muted">${escape(task.company.name)}</p></div><button class="button button-secondary" data-route="profile" data-task="${escape(task.id)}">返回企业档案</button></header><p class="source-context">${source.provided ? '当前资料已用于准备清单。修改后请重新核对材料；历史版本的引用保持原样。' : '录入这份资料的内容，保存后会更新对应的准备项。'}</p><form id="source-form" data-task="${escape(task.id)}" data-source="${escape(source.id)}"><label class="form-field" for="source-text" style="margin-top:26px"><span>资料内容</span></label><textarea id="source-text" name="text" class="source-editor" maxlength="40000" required placeholder="粘贴已确认的资料内容……">${escape(source.text)}</textarea><div class="form-actions"><span class="muted">只使用已提供的企业事实。</span><button type="submit" class="button button-primary">保存资料</button></div></form></div>`;
+    return `<div class="source-page"><header class="page-header"><div><h1>${escape(source.name)}</h1><p class="muted">${escape(task.company.name)}</p></div><button class="button button-secondary" data-route="profile" data-task="${escape(task.id)}">返回企业档案</button></header><p class="source-context">${source.provided ? '当前资料已用于准备清单。修改后请重新核对材料；历史版本的引用保持原样。' : '录入这份资料的内容，保存后会更新对应的准备项。'}</p><form id="source-form" data-task="${escape(task.id)}" data-source="${escape(source.id)}"><label class="form-field" for="source-text" style="margin-top:26px"><span>资料内容</span></label><textarea id="source-text" name="text" class="source-editor" maxlength="40000" required placeholder="粘贴已确认的资料内容……">${escape(source.text)}</textarea><div class="form-actions source-form-actions"><button type="submit" class="button button-primary">保存资料</button></div></form></div>`;
   }
   function render() {
     const previousWorkspace = page.querySelector('.project-workspace');
@@ -108,7 +108,7 @@
     const focusedInput = document.activeElement?.id === 'adviser-message';
     captureFormDraft();
     if(previousWorkspace){
-      if(previousWorkspace.dataset.route === 'task')indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
+      if(previousWorkspace.dataset.viewRoute === 'task')indexPositions.set(previousWorkspace.dataset.task,previousContextTop);
       else documentPositions.set(previousWorkspace.dataset.documentKey,previousContentTop);
     }
     window.PolicyChat.captureView();
@@ -209,7 +209,7 @@
     navigate('task',{task:task.id,work:destinations[serviceId]});
   }
   document.addEventListener('click', event => {
-    const target = event.target instanceof Element ? event.target.closest('[data-action],[data-route]') : null;
+    const target = event.target instanceof Element ? event.target.closest('button[data-action],a[data-action],button[data-route],a[data-route]') : null;
     if (!target) return;
     if(window.PolicyChat.handleClick(target)) return;
     if (M.handleClick(target)) return;
